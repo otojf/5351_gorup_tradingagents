@@ -1,0 +1,174 @@
+schema_version: "1.0"
+project: "CS5351 Group Project - TradingAgents"
+updated: "2026-11-09"
+source_document: "需求与分工-TradingAgents.md"
+options_file: "requirements-options.yaml"
+notes: >-
+  Final registry: 5 primary requirements, one per owner. The 35-item option pool
+  is in requirements-options.yaml. Invariants and supporting NFRs are folded into
+  each primary requirement's fit_criterion and supporting_requirements; they do
+  not consume a separate slot. Priority uses MoSCoW.
+
+requirements:
+
+  # ---------------------------------------------------------------------------
+  # A. 决策安全（Owner A）
+  # ---------------------------------------------------------------------------
+
+  - id: FR-A1
+    type: functional
+    category: functional_behavior
+    statement: >-
+      系统必须在输出任何交易决策前，按版本化风控策略校验 TraderProposal 与
+      PortfolioDecision，返回 APPROVED、REJECTED 或 NEEDS_REVIEW，并给出命中规则 ID；
+      任何缺少止损或超过单票上限的决策不得标为 APPROVED。
+    fit_criterion: >-
+      5 个注入违规样本（缺止损、单票超过 10%、行业集中度超过 30%、
+      盈亏比低于 1.5、黑名单）5/5 不通过 APPROVED；100 个违规 fixture 0 放行；
+      100% 裁决带规则 ID；100% 风控评估有审计记录（规则 ID、输入快照、裁决、
+      policy_version、时间戳）；风控额外延迟 p95 <= 2 秒，且 0 次网络调用。
+    priority: must
+    owner: A
+    component: "risk_gate"
+    source: >-
+      基线缺口：TraderProposal.position_sizing 是自由文本；PortfolioDecision
+      没有确定性风控校验；论文声称风控在管风险，代码里没有硬规则。
+    supporting_requirements:
+      - FR-A2
+      - INV-A1
+      - NFR-A1
+      - NFR-A2
+    verification:
+      test: "test_risk_gate_violations"
+      monitor: "risk_verdict_count"
+      demo: "注入坏单，展示被拒绝、规则 ID 与审计记录"
+    status: draft
+
+  # ---------------------------------------------------------------------------
+  # B. 结论可信（Owner B）
+  # ---------------------------------------------------------------------------
+
+  - id: FR-B1
+    type: functional
+    category: functional_behavior
+    statement: >-
+      最终决策的关键字段（评级理由、入场价、止损、目标价、仓位）必须各带至少一个
+      EvidenceRef（来源类型、来源 ID、定位、短引用或 hash）；无法解析或找不到来源的
+      结论必须标 UNTRACEABLE，且不计入 supported 统计。
+    fit_criterion: >-
+      5 次运行关键字段覆盖率 100%；0 个关键字段在无 ref 时标 SUPPORTED；
+      5 个注入无出处结论 5/5 标 UNTRACEABLE，supported 计数不含它们；
+      证据查询 p95 <= 1 秒；单条证据存储 <= 1KB，不保存全文。
+    priority: must
+    owner: B
+    component: "evidence"
+    source: >-
+      基线缺口：最终决策没有结构化 EvidenceRef，报告是散文，无法区分
+      有出处/无出处，事后无法审计。
+    supporting_requirements:
+      - FR-B2
+      - INV-B1
+      - NFR-B1
+      - NFR-B2
+    verification:
+      test: "test_evidence_coverage"
+      monitor: "traceability_coverage"
+      demo: "点击一条结论跳到报告原文；无出处结论标 UNTRACEABLE"
+    status: draft
+
+  # ---------------------------------------------------------------------------
+  # C. 成本可控（Owner C）
+  # ---------------------------------------------------------------------------
+
+  - id: NFR-C1
+    type: non_functional
+    category: cost
+    statement: >-
+      固定案例单次全量运行必须低于 120,000 token、150 秒；系统必须通过可配置预算、
+      硬上限前停止、缺凭据数据源跳过和分 agent 用量账本实现该上限。
+    fit_criterion: >-
+      3 次运行均值 < 120k token，最大值 < 130k；3 次运行 p95 <= 150 秒；
+      10 次预算 120k 运行 0 次超硬上限，100% 记录压缩/停止原因；
+      缺 FRED key 时 0 次重试；100% 运行有分 agent token 记录，
+      sum 与总 token 误差 <= 1%。
+    priority: must
+    owner: C
+    component: "token_budget"
+    source: >-
+      基线缺口：单次全量 195,192 tokens；没有预算/熔断；FRED 未配 key 时
+      无效重试 7 次；没有分 agent 用量。
+    supporting_requirements:
+      - FR-C1
+      - FR-C2
+      - FR-C3
+      - NFR-C2
+    verification:
+      test: "test_budget_cutoff"
+      monitor: "run_tokens"
+      demo: "同一案例成本从 19.5 万降到 12 万以下；FRED 重试 7 次降到 0"
+    status: draft
+
+  # ---------------------------------------------------------------------------
+  # D. 失败可见（Owner D）
+  # ---------------------------------------------------------------------------
+
+  - id: FR-D2
+    type: functional
+    category: functional_behavior
+    statement: >-
+      结构化输出无解析结果或校验失败时必须重试 1 次；仍失败则标 DEGRADED 并继续；
+      不允许静默降级；工具调用必须被准确计数并记录工具名、开始/结束、状态和次数。
+    fit_criterion: >-
+      10 次运行 0 次 json_schema 调用；结构化输出 schema 校验通过率 >= 95%；
+      强制失败 fixture 触发 1 次重试且报告/日志有 DEGRADED；
+      20 次强制失败 0 次静默降级；工具调用计数与插桩真值误差为 0；
+      缓存数据测试至少 1 次调用。
+    priority: must
+    owner: D
+    component: "structured_adapter"
+    source: >-
+      基线缺口：全量日志明确 2 次结构化输出静默降级；tool_calls 恒为 0，
+      但缓存实际有 1255 行行情数据。
+    supporting_requirements:
+      - FR-D1
+      - FR-D3
+      - INV-D1
+      - NFR-D1
+    verification:
+      test: "test_degraded_marker"
+      monitor: "degradation_count"
+      demo: "基线 2 次降级、工具计数 0；增强版 0 次降级、计数与实际一致"
+    status: draft
+
+  # ---------------------------------------------------------------------------
+  # E. 整体可验证（Owner E）
+  # ---------------------------------------------------------------------------
+
+  - id: NFR-E1
+    type: non_functional
+    category: quality_attribute
+    statement: >-
+      固定案例评测必须可复现：同一 commit/config/data 下评级稳定、指标波动 <= 5%；
+      离线评测必须 <= 10 分钟；CI 必须配置六道 blocking gates。
+    fit_criterion: >-
+      3 次重复运行评级 3/3 一致，token/延迟波动 <= 5%；
+      固定 golden set 3–5 个案例 100% 执行并导出 before/after 对比表；
+      每次运行 manifest 完整（commit、model、prompt hash、config、data snapshot、
+      tokens、latency、degradations、risk verdicts、traceability）；
+      离线套件 p95 <= 10 分钟且 0 次网络调用；6/6 blocking gates 配置，
+      每个 gate 用故意坏 PR 验证能拦。
+    priority: must
+    owner: E
+    component: "eval_harness"
+    source: >-
+      基线缺口：没有固定评测集；没有 run manifest；没有 CI gates；demo 不可复现。
+    supporting_requirements:
+      - FR-E1
+      - FR-E2
+      - FR-E3
+      - INV-E1
+    verification:
+      test: "test_golden_set"
+      monitor: "eval_pass_rate"
+      demo: "同案例 before/after 对比表；故意坏 PR 被 gate 拦下"
+    status: draft
