@@ -528,6 +528,35 @@ behavior change, not a regression.
 
 ### 15.5 Implementation status
 
-The durable-destination rule (§15.1) and the missing-action R6 rule (§15.2) are
-currently **RED** in `test_adapter_safety.py` and await a production fix in a later
-approved turn. Tests were written first; no production code changed in this turn.
+The durable-destination rule (§15.1) and the missing-action R6 rule (§15.2) were
+implemented in commit `e716596`; their tests in `test_adapter_safety.py` now pass
+(RED → GREEN). This section remains as the recorded test-first contract.
+
+## 16. Audit semantics: rule verdict vs publication authorization
+
+This section records (without changing runtime semantics) the distinction the
+implementation already draws, so audit readers are not misled.
+
+- **`risk_evaluation.verdict` is the core rule outcome.** It is the policy verdict
+  computed by the rules (R1–R6) over the supplied inputs, independent of any sink.
+- **`risk_verdict` is the effective publication outcome.** It is what the adapter
+  returns as the decision that may be published, and it can differ from the core
+  rule outcome.
+- **APPROVED core rules do not authorize publication when the required audit has
+  not been persisted.** Publication of an actionable recommendation additionally
+  requires a successful durable audit write. `apply_gate` therefore downgrades an
+  otherwise-APPROVED, ACTIONABLE decision.
+- **`audit_dir=None` produces a non-actionable downgrade.** When the adapter would
+  publish an ACTIONABLE recommendation but no audit destination is supplied, it
+  returns `risk_verdict = NEEDS_REVIEW`, `decision_status = PENDING_REVIEW`, and
+  `final_rating = REVIEW` instead. In that case `risk_evaluation.verdict` may still
+  read `APPROVED` — this is the rule outcome, not the publication outcome. A durable
+  audit failure with a provided destination raises a fail-closed error instead.
+- **File write and close do not imply fsync-level crash durability.** `persist_audit`
+  writes and closes a JSON file; it does not `fsync`. The guarantee is that the
+  record was written before publication, not that it survives a power loss.
+
+Consequence for audit consumers and the persisted state log: read `risk_verdict` /
+`decision_status` / `final_rating` for what was published, and `risk_evaluation` for
+why the rules reached their outcome. When these disagree, the disagreement is the
+audit/authorization gate, not a data error.
