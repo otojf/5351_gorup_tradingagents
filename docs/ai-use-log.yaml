@@ -104,9 +104,45 @@ entries:
     human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
     status: draft
 
+  - commit_range: "feat/nfr-e1-eval..compliance/structure"
+    date: "2026-11-11"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
+      exported to transcripts/)
+    session_id: "ses_e34f0999dffe323Un98HwNnxnO"
+    summary: >-
+      Compliance/structure: added the D2/D3/D4/D6/D9 artifacts and the required
+      repository structure without physically migrating tradingagents/ or tests/,
+      including AGENTS.md, architecture-blueprint.md, Prompt.md, Report.md
+      skeleton, code-governance files, architecture artifacts, QA records,
+      .opencode/.agent rules and permissions, versioned prompts, and src/test
+      mapping READMEs. Team-level content left as explicit TODO; no fabrication.
+    files_changed:
+      - AGENTS.md
+      - Prompt.md
+      - architecture-blueprint.md
+      - Report.md
+      - prompts/
+      - .opencode/
+      - .agent/
+      - src/
+      - test/
+      - docs/code-governance/
+      - docs/architecture/
+      - docs/review-memo.md
+      - docs/debt-register.md
+      - docs/bug-diary.md
+      - docs/ai-use-log.yaml
+      - README.md
+    human_approved_by: "HUANG SIYING (60572233)"
+    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    status: draft
+
 notes: >-
-  Additional per-commit entries are appended as Phase 3/4 work lands. Both
-  human_approved_by fields are intentionally TODO for the team to fill; they are
-  not auto-generated. The second session's transcript has not been exported yet;
-  session_ref records the session id with "export pending" rather than pointing
-  at a nonexistent file.
+  Additional per-commit entries are appended as Phase 3/4 and compliance work
+  lands. human_approved_by is filled with HUANG SIYING (60572233) for local
+  traceability; the team should confirm it. The second session's transcript has
+  not been exported yet; session_ref records the session id with "export pending"
+  rather than pointing at a nonexistent file.

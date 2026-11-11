@@ -1,14 +1,60 @@
 # CS5351 Group Project — TradingAgents
 
-这个仓库目前包含：
+## Purpose and architecture
 
-| 路径 | 内容 |
+TradingAgents is a multi-agent LLM system that analyses a ticker on a trade date
+and produces a five-tier investment rating (`Buy` / `Overweight` / `Hold` /
+`Underweight` / `Sell`, or `REVIEW` when no parseable rating exists). Analysts
+(market, sentiment, news, fundamentals) run in parallel, feed a Bull/Bear
+research debate, then a Trader proposal, a three-way risk debate, and finally the
+Portfolio Manager's decision. See `architecture-blueprint.md` for the master
+constraint document and `docs/architecture/` for ADRs, invariants, the trace
+matrix, and runtime policies.
+
+This project adds, around the baseline (upstream v0.7.1, commit `9fa1196`; team
+baseline `46bde74`):
+
+- a **reproducible offline evaluation harness** (NFR-E1: golden set, run
+  manifest, before/after comparison) under `eval/`, and
+- **six blocking CI gates** (D7) under `scripts/ci/`, wired into
+  `.github/workflows/ci.yml`.
+
+## Project layout
+
+| Path | Contents |
 |---|---|
-| `tradingagents/`、`cli/`、`tests/` | 原始 TradingAgents demo（上游 v0.7.1，commit `9fa1196`） |
-| `docs/req/requirements.yaml` | 最终 5 条主需求 |
-| `docs/req/requirements-options.yaml` | 35 条候选需求，供组员挑选 |
+| `tradingagents/`, `cli/` | Application source (see `src/README.md` mapping). |
+| `tests/` | Deterministic offline tests; live tests via the `integration` marker (see `test/offline/README.md` and `test/live/README.md`). |
+| `eval/` | NFR-E1 evaluation harness. |
+| `scripts/ci/` | Six blocking-gate scripts. |
+| `docs/req/` | Requirements registry + JSON schema. |
+| `docs/architecture/` | Blueprint, ADRs, invariants, trace matrix, policies. |
+| `docs/code-governance/` | Structural/verification constraints, tool manifest. |
+| `docs/evidence/` | Per-feature verification evidence. |
+| `docs/ai-use-log.yaml` | AI-use log (gate 6). |
+| `prompts/` | Versioned runtime-prompt records. |
 
-安装：`pip install -e ".[dev]"`
+## Install and run tests
+
+```bash
+pip install -e ".[dev]"
+
+# Offline (default) — deterministic, no network
+pytest -q
+
+# Live/API-dependent tests (requires API access; excluded by default)
+pytest -m integration
+
+# Full suite including live tests
+pytest -m ""
+
+# Lint
+ruff check .
+```
+
+## GitHub repository
+
+https://github.com/otojf/5351_gorup_tradingagents
 
 ## Blocking gates (D7)
 

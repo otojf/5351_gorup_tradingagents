@@ -1,0 +1,57 @@
+# Versioned runtime prompts — v1.0 (baseline record)
+#
+# IMPORTANT: production agent prompts currently live inline in the agent modules
+# (e.g. tradingagents/agents/analysts/*.py, agents/managers/*.py,
+# agents/researchers/*.py, agents/risk_mgmt/*.py, agents/trader/*.py). Nothing in
+# the codebase loads prompts/*.yaml today. This file is the versioned *record* of
+# the prompt contract, so prompt changes can be diffed and tracked; it is not a
+# runtime loader. When a loader is introduced, this file becomes the source.
+#
+# Related: docs/architecture/adr/001-eval-harness.md (AI context + assembly),
+# docs/architecture/runtime-policy-catalog.md (degraded paths).
+
+schema_version: "1.0"
+prompt_version: "1.0"
+date: "2026-11-11"
+status: baseline-record
+loaded_at_runtime: false
+
+# The layered context structure each agent receives (see ADR-001 §5.1).
+context_layers:
+  - identity            # resolved ticker/company/asset type (tradingagents/agents/context.py)
+  - standing_constraints # immutable behavioral rules (no fabricated prices, cite sources, respect date)
+  - retrieved_knowledge  # analyst reports, tool outputs, memory lessons
+  - conversation_history # prior debate turns
+  - resumable_state      # checkpointed state
+  - current_task         # the node's instruction
+
+# Where each agent's prompt lives (source of truth in code).
+agents:
+  market_analyst: tradingagents/agents/analysts/market_analyst.py
+  sentiment_analyst: tradingagents/agents/analysts/sentiment_analyst.py
+  news_analyst: tradingagents/agents/analysts/news_analyst.py
+  fundamentals_analyst: tradingagents/agents/analysts/fundamentals_analyst.py
+  bull_researcher: tradingagents/agents/researchers/bull_researcher.py
+  bear_researcher: tradingagents/agents/researchers/bear_researcher.py
+  research_manager: tradingagents/agents/managers/research_manager.py
+  trader: tradingagents/agents/trader/trader.py
+  aggressive_analyst: tradingagents/agents/risk_mgmt/aggressive_debator.py
+  neutral_analyst: tradingagents/agents/risk_mgmt/neutral_debator.py
+  conservative_analyst: tradingagents/agents/risk_mgmt/conservative_debator.py
+  portfolio_manager: tradingagents/agents/managers/portfolio_manager.py
+
+# Program-read labels that must stay in English even when output is localized
+# (see tradingagents/agents/context.py:get_language_instruction).
+fixed_labels:
+  - "**Rating**:"
+  - "FINAL TRANSACTION PROPOSAL:"
+
+# Token budget position (owner C implements enforcement; recorded here for the
+# prompt contract). Compaction: summarize conversation_history first, then
+# retrieved_knowledge; never drop standing_constraints or current_task.
+token_budget:
+  compaction_threshold_pct: TODO   # owner C to set the concrete number
+  re_inject_after_compaction:
+    - identity
+    - standing_constraints
+    - current_task
