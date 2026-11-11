@@ -35,6 +35,20 @@ def _finite(*values: float) -> bool:
                for v in values)
 
 
+def normalize_sector(sector: str | None) -> str | None:
+    """Canonical sector key: whitespace-stripped and case-folded, or ``None``.
+
+    Case and whitespace variants of the same sector must compare equal so R3
+    aggregates and compares them consistently (BUG-002). This is intentionally a
+    strict normalization, not fuzzy matching: a misspelling stays a *different*
+    key and must be treated as unresolvable, never guessed.
+    """
+    if sector is None:
+        return None
+    key = sector.strip().casefold()
+    return key or None
+
+
 def validate_snapshot(snapshot: PortfolioRiskSnapshot | None, trade_date: str) -> None:
     """Raise :class:`SnapshotError` when the snapshot is not usable.
 
@@ -74,23 +88,54 @@ def current_stock_value(snapshot: PortfolioRiskSnapshot, ticker: str) -> float:
 
 
 def target_sector(snapshot: PortfolioRiskSnapshot, ticker: str, explicit_sector: str | None) -> str | None:
-    """The analyzed instrument's sector, or ``None`` when it cannot be determined.
+    """The analyzed instrument's sector key, or ``None`` when it cannot be determined.
 
     Prefers the explicit sector from ``target_position``; when the instrument is
-    already held, its recorded sector is a fallback. Never inferred from prose.
+    already held, its recorded sector is a fallback. Returns the normalized key.
+    Never inferred from prose or fetched from a network.
     """
-    if explicit_sector:
-        return explicit_sector
+    explicit = normalize_sector(explicit_sector)
+    if explicit is not None:
+        return explicit
     symbol = normalize_symbol(ticker)
     for h in snapshot.holdings:
-        if normalize_symbol(h.ticker) == symbol and h.sector:
-            return h.sector
+        if normalize_symbol(h.ticker) == symbol:
+            held = normalize_sector(h.sector)
+            if held is not None:
+                return held
     return None
 
 
+def held_sector(snapshot: PortfolioRiskSnapshot, ticker: str) -> str | None:
+    """The held ``ticker``'s own classification key, or ``None`` when not held/unclassified."""
+    symbol = normalize_symbol(ticker)
+    for h in snapshot.holdings:
+        if normalize_symbol(h.ticker) == symbol:
+            return normalize_sector(h.sector)
+    return None
+
+
+def sector_conflict(snapshot: PortfolioRiskSnapshot, ticker: str,
+                    explicit_sector: str | None) -> bool:
+    """Whether an explicit target sector contradicts the ticker's existing classification.
+
+    Only meaningful for an already-held, classified ticker: a conflicting explicit
+    sector must not be able to re-scope the exposure calculation (BUG-002).
+    """
+    explicit = normalize_sector(explicit_sector)
+    if explicit is None:
+        return False
+    existing = held_sector(snapshot, ticker)
+    return existing is not None and existing != explicit
+
+
 def current_sector_value(snapshot: PortfolioRiskSnapshot, sector: str) -> float:
-    """Sum of market values currently held in ``sector``."""
-    return sum(h.market_value for h in snapshot.holdings if h.sector == sector)
+    """Sum of market values currently held in ``sector`` (normalized comparison)."""
+    key = normalize_sector(sector)
+    if key is None:
+        return 0.0
+    return sum(h.market_value for h in snapshot.holdings
+               if normalize_sector(h.sector) == key)
 
 
 def projected_sector_exposure(

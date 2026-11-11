@@ -38,7 +38,9 @@ from .policy import RiskPolicy
 from .portfolio_snapshot import (
     SnapshotError,
     current_stock_value,
+    normalize_sector,
     projected_sector_exposure,
+    sector_conflict,
     target_sector,
     validate_snapshot,
 )
@@ -67,23 +69,35 @@ def _is_finite(value) -> bool:
     )
 
 
-def _direction(action: str | None, rating: str | None) -> tuple[str | None, bool]:
-    """Resolve the decision direction and whether it is unambiguous.
+def _classify(term: str | None) -> str | None:
+    """Bucket a single action/rating term into long/short/hold, or ``None``."""
+    if term in _LONG:
+        return "long"
+    if term in _SHORT:
+        return "short"
+    if term in _HOLD:
+        return "hold"
+    return None
 
-    Returns ``(direction, consistent)`` where ``direction`` is ``"long"``,
-    ``"short"``, ``"hold"``, or ``None`` (unknown). ``consistent`` is ``False``
-    when the action and the model rating point in opposite directions.
+
+def _direction(action: str | None, rating: str | None) -> tuple[str | None, bool, bool]:
+    """Resolve the decision direction, consistency, and final-rating validity.
+
+    Returns ``(direction, consistent, rating_valid)`` where ``direction`` is
+    ``"long"``, ``"short"``, ``"hold"``, or ``None`` (unusable). ``consistent`` is
+    ``False`` when the action and the model rating point in opposite directions.
+    ``rating_valid`` is ``True`` only when the *final PortfolioDecision rating* is a
+    recognized term; a missing, unrecognized, or ``REVIEW`` rating is not valid and
+    must never be replaced by the Trader's action to obtain approval (BUG-001).
     """
-    a = action if action in (_LONG | _SHORT | _HOLD) else None
-    r = rating if rating in (_LONG | _SHORT | _HOLD) else None
-
-    a_bucket = "long" if a in _LONG else "short" if a in _SHORT else "hold" if a in _HOLD else None
-    r_bucket = "long" if r in _LONG else "short" if r in _SHORT else "hold" if r in _HOLD else None
+    a_bucket = _classify(action)
+    r_bucket = _classify(rating)
+    rating_valid = r_bucket is not None
 
     if a_bucket and r_bucket and a_bucket != r_bucket:
-        return None, False
+        return None, False, rating_valid
     direction = a_bucket or r_bucket
-    return direction, True
+    return direction, True, rating_valid
 
 
 def _rule(rule_id: str, outcome: RuleOutcome, detail: str = "",
@@ -92,15 +106,22 @@ def _rule(rule_id: str, outcome: RuleOutcome, detail: str = "",
                       observed=observed, threshold=threshold)
 
 
-def _evaluate_integrity(inputs: RiskInputs, direction, consistent: bool) -> RuleResult:
+def _evaluate_integrity(inputs: RiskInputs, direction, consistent: bool,
+                        rating_valid: bool) -> RuleResult:
     """R6: inputs present, finite, consistent, direction unambiguous, affordable.
 
-    Records UNKNOWN for: contradictory direction, ambiguous direction, non-finite
-    prices, an unusable/inconsistent/stale portfolio snapshot, and a purchase the
-    cash cannot fund. R6 does not duplicate the cap (R2) or sector (R3) checks.
+    Records UNKNOWN for: a missing/unrecognized/``REVIEW`` final rating (BUG-001),
+    contradictory direction, ambiguous direction, non-finite prices, an
+    unusable/inconsistent/stale portfolio snapshot, and a purchase the cash cannot
+    fund. R6 does not duplicate the cap (R2) or sector (R3) checks.
     """
     if not consistent:
         return _rule(R6, RuleOutcome.UNKNOWN, "action and model_rating disagree on direction")
+    if not rating_valid:
+        # The final PortfolioDecision rating must be usable; it is never replaced by
+        # the Trader's action to obtain an approval.
+        return _rule(R6, RuleOutcome.UNKNOWN,
+                     "final model rating is missing, unrecognized, or REVIEW")
     if direction is None:
         return _rule(R6, RuleOutcome.UNKNOWN, "direction is ambiguous")
     if direction == "short":
@@ -186,8 +207,12 @@ def _evaluate_single_name(inputs: RiskInputs, direction, policy: RiskPolicy) -> 
 def _evaluate_sector(inputs: RiskInputs, direction, policy: RiskPolicy) -> RuleResult:
     """R3: projected affected-sector exposure <= cap.
 
-    UNKNOWN when the target position/portfolio is missing, the weight or snapshot
-    is unusable, the target sector is unknown, or any holding lacks a sector.
+    Sector names are normalized (whitespace-stripped, case-folded) for both the
+    target and every holding, so equivalent spellings aggregate identically
+    (BUG-002). UNKNOWN when the target position/portfolio is missing, the weight or
+    snapshot is unusable, any holding lacks a sector, the target sector is unknown,
+    or the explicit target sector contradicts an already-held ticker's
+    classification (a conflict must not re-scope the calculation into a false PASS).
     """
     if direction != "long":
         return _rule(R3, RuleOutcome.NOT_APPLICABLE, "sector cap applies to long BUY")
@@ -201,8 +226,12 @@ def _evaluate_sector(inputs: RiskInputs, direction, policy: RiskPolicy) -> RuleR
     except SnapshotError as exc:
         return _rule(R3, RuleOutcome.UNKNOWN, f"portfolio snapshot unusable: {exc}")
     # An unclassified holding makes the book's sector exposure unknowable.
-    if any(h.sector is None for h in inputs.portfolio.holdings):
+    if any(normalize_sector(h.sector) is None for h in inputs.portfolio.holdings):
         return _rule(R3, RuleOutcome.UNKNOWN, "a holding has no sector classification")
+    # A conflicting explicit target sector must not hide the real concentration.
+    if sector_conflict(inputs.portfolio, inputs.ticker, inputs.target_position.sector):
+        return _rule(R3, RuleOutcome.UNKNOWN,
+                     "explicit target sector conflicts with the held classification")
     sector = target_sector(inputs.portfolio, inputs.ticker, inputs.target_position.sector)
     if sector is None:
         return _rule(R3, RuleOutcome.UNKNOWN, "target sector is unknown")
@@ -231,12 +260,21 @@ def _evaluate_reward_risk(inputs: RiskInputs, direction) -> RuleResult:
         return _rule(R4, RuleOutcome.UNKNOWN, "a price field is not finite")
     entry, stop, target = inputs.entry_price, inputs.stop_loss, inputs.price_target
     if direction == "long":
+        # For an ordinary long stock BUY, provided prices must be strictly positive.
+        # Non-positive levels cannot be real prices and must never be approved
+        # (BUG-003), even when their ordering/ratio would otherwise look valid.
+        if entry <= 0.0 or stop <= 0.0 or target <= 0.0:
+            return _rule(R4, RuleOutcome.VIOLATED,
+                         "long BUY prices must be strictly positive")
         if not (stop < entry < target):
             return _rule(R4, RuleOutcome.VIOLATED,
                          "long ordering must be stop < entry < target")
         risk = entry - stop
         reward = target - entry
     else:  # short (risk-reducing direction), pending team confirmation
+        if entry <= 0.0 or stop <= 0.0 or target <= 0.0:
+            return _rule(R4, RuleOutcome.VIOLATED,
+                         "short BUY prices must be strictly positive")
         if not (stop > entry > target):
             return _rule(R4, RuleOutcome.VIOLATED,
                          "short ordering must be target < entry < stop")
@@ -324,7 +362,7 @@ def evaluate_risk(inputs: RiskInputs, policy: RiskPolicy | None = None) -> RiskE
     policy = policy or RiskPolicy()
     started_wall = datetime.now(UTC)
     started = time.perf_counter()
-    direction, consistent = _direction(inputs.action, inputs.model_rating)
+    direction, consistent, rating_valid = _direction(inputs.action, inputs.model_rating)
 
     rule_results: list[RuleResult] = []
     rule_results.append(_evaluate_stop_loss(inputs, direction))
@@ -332,7 +370,7 @@ def evaluate_risk(inputs: RiskInputs, policy: RiskPolicy | None = None) -> RiskE
     rule_results.append(_evaluate_sector(inputs, direction, policy))
     rule_results.append(_apply_reward_threshold(_evaluate_reward_risk(inputs, direction), policy))
     rule_results.append(_evaluate_blacklist(inputs, policy))
-    rule_results.append(_evaluate_integrity(inputs, direction, consistent))
+    rule_results.append(_evaluate_integrity(inputs, direction, consistent, rating_valid))
 
     # A positive marker when every rule passes, so every verdict carries an id.
     all_pass = all(r.outcome in (RuleOutcome.PASS, RuleOutcome.NOT_APPLICABLE)
