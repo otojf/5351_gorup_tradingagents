@@ -26,7 +26,7 @@ specified path to its real location.
 | `.opencode/`, `.agent/` | `.opencode/`, `.agent/` | `permissions.jsonc`, `rules.md`; `.agent/rules.md` (covenant). |
 | `.github/workflows/ci.yml` | `.github/workflows/ci.yml` | D4/D7 six gates. |
 | `prompts/prompt_v1.*.yaml` | `prompts/prompt_v1.0.yaml`, `prompts/prompt_v1.1.yaml` | Versioned runtime-prompt records (production prompts live in agent modules). |
-| `transcripts/<student-id>-<student-name>.md` | `transcripts/60572233-HUANG-SIYING.md` | D5; renamed to the required convention; the other four member transcripts are still pending. |
+| `transcripts/<student-id>-<student-name>.md` | `transcripts/60572233-HUANG-SIYING.md`; `transcripts/60572233-HUANG-SIYING-continuation.md` | D5; main E1 transcript + continuation; the other four member transcripts are still pending. |
 
 ## Why no physical migration now
 

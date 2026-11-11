@@ -28,9 +28,7 @@ entries:
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
-    session_ref: >-
-      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
-      exported to transcripts/)
+    session_ref: "transcripts/60572233-HUANG-SIYING-continuation.md"
     session_id: "ses_e34f0999dffe323Un98HwNnxnO"
     summary: >-
       Requirements/architecture artifacts for NFR-E1: nested registry entries
@@ -48,16 +46,14 @@ entries:
       - docs/ai-use-log.yaml
       - pyproject.toml
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    human_review_ref: "transcripts/60572233-HUANG-SIYING-continuation.md (Intervention index)"
     status: draft
 
   - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
-    session_ref: >-
-      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
-      exported to transcripts/)
+    session_ref: "transcripts/60572233-HUANG-SIYING-continuation.md"
     session_id: "ses_e34f0999dffe323Un98HwNnxnO"
     summary: >-
       Phase 3 eval test fixes: runner records tool-call args from AIMessages into
@@ -74,16 +70,14 @@ entries:
       - docs/req/requirements.yaml
       - docs/architecture/trace-matrix.md
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    human_review_ref: "transcripts/60572233-HUANG-SIYING-continuation.md (Intervention index)"
     status: draft
 
   - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
-    session_ref: >-
-      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
-      exported to transcripts/)
+    session_ref: "transcripts/60572233-HUANG-SIYING-continuation.md"
     session_id: "ses_e34f0999dffe323Un98HwNnxnO"
     summary: >-
       Phase 4 CI gates: six local gate scripts under scripts/ci/ with bad-input
@@ -101,16 +95,14 @@ entries:
       - docs/evidence/e1/verification/
       - docs/ai-use-log.yaml
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    human_review_ref: "transcripts/60572233-HUANG-SIYING-continuation.md (Intervention index)"
     status: draft
 
   - commit_range: "feat/nfr-e1-eval..compliance/structure"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
-    session_ref: >-
-      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
-      exported to transcripts/)
+    session_ref: "transcripts/60572233-HUANG-SIYING-continuation.md"
     session_id: "ses_e34f0999dffe323Un98HwNnxnO"
     summary: >-
       Compliance/structure: added the D2/D3/D4/D6/D9 artifacts and the required
@@ -137,12 +129,11 @@ entries:
       - docs/ai-use-log.yaml
       - README.md
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    human_review_ref: "transcripts/60572233-HUANG-SIYING-continuation.md (Intervention index)"
     status: draft
 
 notes: >-
   Additional per-commit entries are appended as Phase 3/4 and compliance work
   lands. human_approved_by is filled with HUANG SIYING (60572233) for local
-  traceability; the team should confirm it. The second session's transcript has
-  not been exported yet; session_ref records the session id with "export pending"
-  rather than pointing at a nonexistent file.
+  traceability; the team should confirm it. The second session's transcript is
+  exported to transcripts/60572233-HUANG-SIYING-continuation.md.
