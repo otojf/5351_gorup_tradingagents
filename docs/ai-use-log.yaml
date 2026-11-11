@@ -10,7 +10,7 @@ entries:
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
-    session_ref: "transcripts/opencode-nfr-e1-annotated.md"
+    session_ref: "transcripts/60572233-HUANG-SIYING.md"
     session_id: "ses_e35391b77ffeQQoGyxETkYqTMJ"
     summary: >-
       Built the NFR-E1 offline evaluation harness: slices 1-3 (golden set,
@@ -19,9 +19,9 @@ entries:
     files_changed:
       - eval/
       - tests/test_eval_harness.py
-      - transcripts/opencode-nfr-e1-annotated.md
+      - transcripts/60572233-HUANG-SIYING.md
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "transcripts/opencode-nfr-e1-annotated.md (Intervention index)"
+    human_review_ref: "transcripts/60572233-HUANG-SIYING.md (Intervention index)"
     status: draft
 
   - commit_range: "46bde74..feat/nfr-e1-eval"

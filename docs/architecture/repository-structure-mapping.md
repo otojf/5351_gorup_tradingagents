@@ -26,7 +26,7 @@ specified path to its real location.
 | `.opencode/`, `.agent/` | *(pending)* | D3 permission/rules files. |
 | `.github/workflows/ci.yml` | `.github/workflows/ci.yml` | D4/D7 gates (six gates wired in Phase 4). |
 | `prompts/prompt_v1.*.yaml` | *(pending)* | Versioned runtime prompts. |
-| `transcripts/<student-id>-<student-name>.md` | `transcripts/opencode-nfr-e1-annotated.md` | D5; rename + add remaining transcripts pending. |
+| `transcripts/<student-id>-<student-name>.md` | `transcripts/60572233-HUANG-SIYING.md` | D5; renamed to the required convention; the other four member transcripts are still pending. |
 
 ## Why no physical migration now
 

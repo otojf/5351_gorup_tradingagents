@@ -11,7 +11,7 @@ until this is done (that is expected, not a bug).
 
 - approved_by: HUANG SIYING (60572233)
 - approved_date: 2026-11-11
-- test_scope: NFR-E1 eval harness tests (tests/test_eval_harness.py) and CI gate scripts (tests/test_ci_gates.py); test-first evidence in transcripts/opencode-nfr-e1-annotated.md.
+- test_scope: NFR-E1 eval harness tests (tests/test_eval_harness.py) and CI gate scripts (tests/test_ci_gates.py); test-first evidence in transcripts/60572233-HUANG-SIYING.md.
 
 ## What was approved
 
