@@ -306,3 +306,167 @@ Recorded here and mirrored in the test plan; production must not assume them.
 - **D-scope-3 (HOLD rule exemptions):** whether `R4` is `NOT_APPLICABLE` for HOLD.
 - **D-scope-4 (blacklist source):** injectable policy (v1 default) vs config; adding
   a config-driven source is FR-A3 scope and is not implemented here.
+
+## 13. Stage 2 integration architecture (revised decision)
+
+This section records the integration decision **before** integration coding. It
+revises the Stage 2 description in §11 based on inspection of the actual
+publication and streaming behavior in `46bde74`.
+
+### 13.1 Where a recommendation is published
+
+Every consumer derives the *effective* public signal from
+`run_rating(final_state)` (which reads `final_rating`):
+
+- `TradingAgentsGraph._run_graph` returns `run_rating(final_state)` as the signal.
+- `_log_state` writes `final_rating` into the state log.
+- `record_decision` writes the memory-log rating tag.
+- `reporting._header` writes `- Rating: …`; `report_html` renders it as a badge.
+- The CLI's post-run notice uses `is_review(run_rating(final_state))`.
+
+Graph streaming (`stream_run`) emits per-node deltas; the Portfolio Manager is the
+last node and `record_decision` is called only after the stream ends.
+
+### 13.2 Selected boundary: Portfolio Manager output adapter (not a separate node)
+
+The gate is invoked **once**, inside the Portfolio Manager node, at its output
+boundary, because that node is the single point where both structured objects exist
+and after which *every* publication path consumes `final_rating`. A separate graph
+node would add a second evaluation surface and require every consumer path to be
+audited again; the PM boundary is the smallest single authoritative decision
+boundary and covers API and CLI-merge identically.
+
+The adapter:
+- retains `trader_proposal` and `portfolio_decision` in state (structured, no
+  Markdown re-parsing);
+- builds `RiskInputs` from the structured objects plus a caller-supplied
+  `PortfolioRiskSnapshot`/`TargetPosition`;
+- runs `evaluate_risk(policy)` exactly once;
+- preserves the model rating in `model_rating` and writes `final_rating` =
+  effective public signal (`REVIEW` when `risk_verdict != APPROVED`, else the model
+  rating), plus `risk_verdict`, `decision_status`, `risk_evaluation`;
+- persists the audit record into the state log (append-only) without changing the
+  rendered strings consumers already read.
+
+This is a **revision** of §11's "adds `node.py`" — the boundary adapter replaces the
+separate node for v1, keeping one evaluation.
+
+### 13.3 Input availability (additive, caller-facing)
+
+A new additive config key `risk_portfolio` (a dict matching
+`PortfolioRiskSnapshot` + optional `target_position`) supplies the structured
+snapshot and target weight. It is passed through `config` to the adapter so both
+`propagate()` and the CLI can supply it. When absent, inputs are incomplete and
+the gate fails closed (NEEDS_REVIEW), never approving on missing data. The adapter
+never parses Markdown sizing nor invents market values/prices/sectors. The
+reachable APPROVED path for an in-bounds BUY is exercised offline by supplying the
+snapshot; this prevents "everything is NEEDS_REVIEW" by construction.
+
+Both structured decisions are required: a missing/invalid Trader `action` **and** a
+missing/invalid final `PortfolioDecision.rating` each make R6 UNKNOWN (already
+implemented for the rating; the adapter must also treat a missing action as
+incomplete rather than letting the rating alone define direction silently).
+
+### 13.4 Exact files and interfaces affected (Stage 2 coding, later)
+
+- `tradingagents/agents/state.py` — additive keys: `trader_proposal`,
+  `portfolio_decision`, `model_rating`, `risk_verdict`, `decision_status`,
+  `risk_evaluation`.
+- `tradingagents/agents/trader/trader.py` — return `trader_proposal` alongside the
+  unchanged rendered string.
+- `tradingagents/agents/managers/portfolio_manager.py` — return
+  `portfolio_decision`; invoke the gate adapter; set `final_rating` to the
+  effective signal only through the adapter.
+- `tradingagents/graph/trading_graph.py` — pass `risk_portfolio` config to the PM
+  adapter; add a `risk_gate` layout marker to `_run_signature`; persist the audit
+  record in `_log_state`; guard `record_decision` so an audit-persistence failure
+  cannot leave an actionable signal.
+- `tradingagents/risk_gate/adapter.py` (new) — pure wiring from structured objects
+  + snapshot to `RiskInputs`, and the gate call. No graph import in the engine.
+
+No changes to `rating.py`, `reporting.py`, `report_html.py`, `cli/*`,
+`memory/*`, or `checkpoint.py` semantics are required: they consume `final_rating`,
+which the adapter sets to the effective signal, and `model_rating` is preserved for
+evidence.
+
+### 13.5 Safe pre-gate checkpoint behavior
+
+The `risk_gate` marker in `_run_signature` changes the thread id, so a checkpoint
+saved before the gate cannot resume into a gated graph; it starts fresh and is
+evaluated. This is the behavior the checkpoint test asserts (actual resume, not a
+hash substring).
+
+### 13.6 Intentional behavior changes vs regressions
+
+Intentional (safety): `final_rating` (and therefore the propagate signal, state
+log `final_rating`, memory rating tag, report rating header, HTML badge, and CLI
+notice) becomes `REVIEW` for REJECTED/NEEDS_REVIEW while `model_rating` retains the
+model's own value. Rendered decision text is unchanged. Everything else is a
+regression if it changes.
+
+## 14. Stage 2 revision: audit-before-publish (from final test review)
+
+The output-boundary adapter (§13.2) computes the verdict before the PM node returns,
+so no consumer can see an actionable BUY that was not evaluated. The final review
+identified a narrower gap: **on-disk audit durability relative to publication**.
+
+### 14.1 Decision
+
+The gate must establish the durable audit **before** an actionable (`APPROVED`)
+signal is released. Two facts constrain this:
+
+- The state log is written by `record_decision` *after* the stream ends; the PM
+  node return (and any streamed `final_rating`) precedes it.
+- A streamed `final_rating == "Buy"` could therefore be observed before the audit
+  is on disk if persistence happened only in `record_decision`.
+
+To guarantee safety without adding a second evaluation:
+
+1. The adapter computes the verdict (once) and, for `APPROVED` only, **persists the
+   audit record durably before returning** the state update that sets
+   `final_rating` to an actionable rating. For `REJECTED`/`NEEDS_REVIEW` the
+   published value is `REVIEW`, which is already non-actionable, so persistence may
+   occur either before or alongside `_log_state`; the recommendation cannot be
+   acted on regardless.
+2. `_log_state` also records the audit (append-only) for the run manifest.
+3. If durable persistence raises, the adapter **fails closed**: it does not emit an
+   actionable `final_rating`; the run surfaces the failure (or downgrades to
+   `REVIEW` with the failure recorded) rather than approving.
+
+This keeps a single evaluation and one authoritative boundary. It is a refinement
+of §13.2, not a new architecture.
+
+### 14.2 Audit content (minimum necessary)
+
+The persisted audit is the `RiskEvaluation`: rule ids + outcomes, the minimal
+`input_snapshot` (including `target_position_weight`, `portfolio_value`, `cash`,
+`target_sector`, prices, action, model rating), derived per-rule `observed`/
+`threshold` values (so R2 weight and R3 projected sector exposure are explainable),
+verdict, `decision_status`, `policy_version`, `policy_hash`, `evaluated_at_utc`,
+and `latency_ms`. No credentials, prompts, or full holdings beyond what explains
+the two exposure rules.
+
+### 14.3 Consequence for tests
+
+- The streamed-output test must show no actionable BUY is released without a
+  durable audit; a simulated persistence failure must not yield an actionable
+  `final_rating` on the stream. The failure is injected by patching the **actual**
+  durable writer (`tradingagents.risk_gate.adapter.persist_audit`) with
+  `raising=True`, recording that it was invoked, so a missing writer fails the test
+  RED rather than silently injecting an unused fake.
+- The audit must contain the numeric inputs and derived exposures for R2/R3.
+
+### 14.4 Caller configuration path (documented, not invented)
+
+There is **no** `risk_portfolio` CLI flag or environment variable, and this stage
+adds none. The only supported caller path for valid inputs is the **Python API**:
+`TradingAgentsGraph(config={"risk_portfolio": {...}})` (exercised by the Python-API
+test). The **default CLI path** supplies no structured snapshot and therefore
+**fails closed** to `NEEDS_REVIEW` → `REVIEW`. Any future CLI surface would be a
+separate, explicitly-approved change; no test claims a CLI feature that does not
+exist.
+
+The durable audit writer is defined by the Stage 2 adapter as
+`tradingagents.risk_gate.adapter.persist_audit(evaluation, ...)`; it must be called
+for **every** evaluation before the Portfolio Manager publishes an actionable
+recommendation.

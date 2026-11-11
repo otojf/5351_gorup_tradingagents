@@ -385,3 +385,86 @@ Stage 2 (later, separate approval) performs integration and the API/CLI/checkpoi
 acceptance tests (`test_integration_retention.py`, `test_decision_boundary.py`).
 Those tests are **not approved** for the core stage and must not be claimed as
 such. Proposed core-stage production files are enumerated in the ADR.
+
+## 9. Stage 2 integration test plan (tests-only this turn)
+
+The gate is invoked once at the **Portfolio Manager output boundary** (ADR §13),
+so one authoritative evaluation covers the API and CLI paths. The revised tests run
+real graph execution with the existing offline scripted model
+(`tests/test_graph_end_to_end.py`); they do not mock the verdict and do not bypass
+the engine.
+
+### 9.1 Proposed adapter interface (target of the tests)
+
+```python
+# tradingagents/risk_gate/adapter.py (proposed)
+def build_inputs(ticker, trade_date, trader_proposal, portfolio_decision,
+                 risk_portfolio) -> RiskInputs: ...
+def apply_gate(ticker, trade_date, trader_proposal, portfolio_decision,
+               risk_portfolio, policy=None) -> dict:
+    # returns state updates: model_rating, risk_verdict, decision_status,
+    # risk_evaluation (RiskEvaluation) and effective_final_rating
+```
+
+Caller-facing additive config: `risk_portfolio` = `{ snapshot: {...},
+target_position: {target_position_weight, sector} }`. Absent → R6 UNKNOWN
+(fail closed); present and in-bounds → APPROVED.
+
+### 9.2 Test matrix (`test_decision_boundary.py`, `test_integration_retention.py`)
+
+| Group | Test | Requirement |
+|---|---|---|
+| A API | valid BUY + complete snapshot → APPROVED, signal = model rating, ACTIONABLE | FR-A1, §5.1 |
+| A API | missing stop → REJECTED, signal REVIEW, model_rating kept | INV-A1 |
+| A API | missing snapshot → NEEDS_REVIEW, signal REVIEW | §5.3 fail-closed |
+| B CLI | real `run_analysis` (real graph, real `record_decision`); displayed notice is REVIEW; state log carries verdict | §5.1 |
+| B CLI | default CLI path (no snapshot) fails closed to REVIEW | §5.3, §14.4 |
+| A API | Python API `TradingAgentsGraph(config={"risk_portfolio": ...})` can APPROVE | §14.4 |
+| B CLI | no actionable BUY published before evaluation (streamed steps) | §5.1 |
+| C data | both structured objects reach the gate | §6 |
+| C data | free-text fallback cannot bypass inputs (still NEEDS_REVIEW) | §5.3 |
+| C data | validation failure → non-actionable + audit record | NFR-A2 |
+| D audit | rule ids/outcomes, snapshot, verdict, policy v/hash, UTC | NFR-A2 |
+| D audit | numeric exposure inputs + derived R2/R3 values present | §5.3, §14.2 |
+| D audit | no credentials/raw prompts | NFR-SEC |
+| D audit | APPROVED, REJECTED, NEEDS_REVIEW all audited | NFR-A2 |
+| D audit | durable-audit failure cannot release an actionable BUY on the stream | §5.1, §14 |
+| E downstream | model recommendation preserved as evidence; distinct from signal | §5.1 |
+| E downstream | blocked BUY not an authorized BUY in report header/memory | §5.1 |
+| F checkpoint | real resume; pre-gate checkpoint re-evaluates | §13.5 |
+| F checkpoint | legacy (pre-gate) signature checkpoint cannot bypass evaluation | §14, §13.5 |
+| G perf | **actual adapter** overhead (conversion+evaluation+audit) p50/p95 ≤ 2000 ms | NFR-A1 |
+| G perf | 0 extra network calls attributable to the gate | NFR-A1 |
+
+### 9.3 Expected before integration coding
+
+These tests import `tradingagents.risk_gate.adapter` (and, for the durable-audit
+stream test, a proposed `risk_gate._persist_audit`) and the new state keys; until
+the adapter exists they fail (RED) honestly, not skip. A small number pass on the
+baseline because they assert fail-closed/preserve behavior that already holds
+(`test_audit_persistence_failure_cannot_leave_actionable_signal`,
+`test_audit_failure_does_not_release_actionable_buy_on_stream`,
+`test_existing_full_run_still_reaches_a_decision`). The 195 core tests remain green
+and are not weakened.
+
+### 9.4 Traceability additions
+
+| Requirement | Integration test |
+|---|---|
+| FR-A1 | A-valid, A-missing-stop, B-cli (3 CLI tests) |
+| INV-A1 | A-missing-stop, C-validation |
+| NFR-A1 | G-perf (real adapter p50/p95), G-network |
+| NFR-A2 | D-audit (all), D-durable-audit-before-publish |
+| FR-E2 (manifest) | D-state-log |
+| §13.5/§14 checkpoint | F-resume, F-legacy |
+
+### 9.5 Caller configuration path (Python API only)
+
+There is **no** `risk_portfolio` CLI flag or env var, and this stage adds none. The
+only supported caller path for valid inputs is the **Python API**:
+`TradingAgentsGraph(config={"risk_portfolio": {...}})`, exercised by the Python-API
+test. The default CLI supplies no snapshot and fails closed (NEEDS_REVIEW → REVIEW),
+proven by the real-CLI test. The durable audit writer is
+`tradingagents.risk_gate.adapter.persist_audit`; the streamed-audit-failure test
+patches it with `raising=True`, verifies it was invoked, and asserts no actionable
+BUY is released when it fails.
