@@ -161,6 +161,10 @@ class TradingAgentsGraph:
             # before the Memory Log step would resume without the lessons.
             "analysts=parallel",
             "memory=parallel",
+            # The FR-A1 risk gate runs at the Portfolio Manager boundary; a
+            # checkpoint saved before it must not resume into the gated graph, so
+            # it starts fresh and is evaluated (ADR §13.5/§14).
+            "risk_gate=v1",
             f"settings={digest}",
         ])
 
@@ -464,6 +468,20 @@ class TradingAgentsGraph:
             "final_rating": run_rating(final_state),
             "run_settings": self.run_settings(),
         }
+
+        # FR-A1 audit: persist the gate's verdict, the model rating as evidence, and
+        # the complete (redacted) evaluation. Absent for runs without the gate.
+        if final_state.get("risk_verdict") is not None:
+            entry["risk_verdict"] = final_state["risk_verdict"]
+            entry["decision_status"] = final_state.get("decision_status")
+            entry["model_rating"] = final_state.get("model_rating")
+            evaluation = final_state.get("risk_evaluation")
+            if evaluation is not None:
+                from tradingagents.risk_gate.adapter import _audit_payload
+                payload = _audit_payload(evaluation)
+                entry["risk_evaluation"] = payload
+                entry["policy_version"] = payload["policy_version"]
+                entry["policy_hash"] = payload["policy_hash"]
 
         # A ticker that would escape the results directory is rejected.
         safe_ticker = safe_ticker_component(final_state["company_of_interest"])

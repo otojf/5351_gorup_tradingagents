@@ -80,24 +80,28 @@ def _classify(term: str | None) -> str | None:
     return None
 
 
-def _direction(action: str | None, rating: str | None) -> tuple[str | None, bool, bool]:
-    """Resolve the decision direction, consistency, and final-rating validity.
+def _direction(action: str | None, rating: str | None) -> tuple[str | None, bool, bool, bool]:
+    """Resolve the decision direction and validity flags.
 
-    Returns ``(direction, consistent, rating_valid)`` where ``direction`` is
-    ``"long"``, ``"short"``, ``"hold"``, or ``None`` (unusable). ``consistent`` is
-    ``False`` when the action and the model rating point in opposite directions.
-    ``rating_valid`` is ``True`` only when the *final PortfolioDecision rating* is a
-    recognized term; a missing, unrecognized, or ``REVIEW`` rating is not valid and
-    must never be replaced by the Trader's action to obtain approval (BUG-001).
+    Returns ``(direction, consistent, rating_valid, action_valid)`` where
+    ``direction`` is ``"long"``, ``"short"``, ``"hold"``, or ``None`` (unusable).
+    ``consistent`` is ``False`` when the action and the model rating point in
+    opposite directions. ``rating_valid`` is ``True`` only when the *final
+    PortfolioDecision rating* is a recognized term; a missing, unrecognized, or
+    ``REVIEW`` rating is not valid and must never be replaced by the Trader's action
+    to obtain approval (BUG-001). ``action_valid`` is ``True`` only when the
+    *Trader action* is a recognized term; a missing/unrecognized action must not be
+    replaced by the PM rating to obtain approval (FIX 2).
     """
     a_bucket = _classify(action)
     r_bucket = _classify(rating)
     rating_valid = r_bucket is not None
+    action_valid = a_bucket is not None
 
     if a_bucket and r_bucket and a_bucket != r_bucket:
-        return None, False, rating_valid
+        return None, False, rating_valid, action_valid
     direction = a_bucket or r_bucket
-    return direction, True, rating_valid
+    return direction, True, rating_valid, action_valid
 
 
 def _rule(rule_id: str, outcome: RuleOutcome, detail: str = "",
@@ -107,13 +111,14 @@ def _rule(rule_id: str, outcome: RuleOutcome, detail: str = "",
 
 
 def _evaluate_integrity(inputs: RiskInputs, direction, consistent: bool,
-                        rating_valid: bool) -> RuleResult:
+                        rating_valid: bool, action_valid: bool) -> RuleResult:
     """R6: inputs present, finite, consistent, direction unambiguous, affordable.
 
-    Records UNKNOWN for: a missing/unrecognized/``REVIEW`` final rating (BUG-001),
-    contradictory direction, ambiguous direction, non-finite prices, an
-    unusable/inconsistent/stale portfolio snapshot, and a purchase the cash cannot
-    fund. R6 does not duplicate the cap (R2) or sector (R3) checks.
+    Records UNKNOWN for: a missing/unrecognized/``REVIEW`` final rating (BUG-001), a
+    missing/unrecognized Trader action (FIX 2), contradictory direction, ambiguous
+    direction, non-finite prices, an unusable/inconsistent/stale portfolio snapshot,
+    and a purchase the cash cannot fund. R6 does not duplicate the cap (R2) or sector
+    (R3) checks.
     """
     if not consistent:
         return _rule(R6, RuleOutcome.UNKNOWN, "action and model_rating disagree on direction")
@@ -122,6 +127,11 @@ def _evaluate_integrity(inputs: RiskInputs, direction, consistent: bool,
         # the Trader's action to obtain an approval.
         return _rule(R6, RuleOutcome.UNKNOWN,
                      "final model rating is missing, unrecognized, or REVIEW")
+    if not action_valid:
+        # The Trader's structured action must be usable; the PM rating must not
+        # stand in for a missing/unrecognized Trader authorization.
+        return _rule(R6, RuleOutcome.UNKNOWN,
+                     "trader action is missing or unrecognized")
     if direction is None:
         return _rule(R6, RuleOutcome.UNKNOWN, "direction is ambiguous")
     if direction == "short":
@@ -362,7 +372,7 @@ def evaluate_risk(inputs: RiskInputs, policy: RiskPolicy | None = None) -> RiskE
     policy = policy or RiskPolicy()
     started_wall = datetime.now(UTC)
     started = time.perf_counter()
-    direction, consistent, rating_valid = _direction(inputs.action, inputs.model_rating)
+    direction, consistent, rating_valid, action_valid = _direction(inputs.action, inputs.model_rating)
 
     rule_results: list[RuleResult] = []
     rule_results.append(_evaluate_stop_loss(inputs, direction))
@@ -370,7 +380,7 @@ def evaluate_risk(inputs: RiskInputs, policy: RiskPolicy | None = None) -> RiskE
     rule_results.append(_evaluate_sector(inputs, direction, policy))
     rule_results.append(_apply_reward_threshold(_evaluate_reward_risk(inputs, direction), policy))
     rule_results.append(_evaluate_blacklist(inputs, policy))
-    rule_results.append(_evaluate_integrity(inputs, direction, consistent, rating_valid))
+    rule_results.append(_evaluate_integrity(inputs, direction, consistent, rating_valid, action_valid))
 
     # A positive marker when every rule passes, so every verdict carries an id.
     all_pass = all(r.outcome in (RuleOutcome.PASS, RuleOutcome.NOT_APPLICABLE)
