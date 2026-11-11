@@ -468,3 +468,36 @@ proven by the real-CLI test. The durable audit writer is
 `tradingagents.risk_gate.adapter.persist_audit`; the streamed-audit-failure test
 patches it with `raising=True`, verifies it was invoked, and asserts no actionable
 BUY is released when it fails.
+
+## 10. Stage 2 final safety-review tests (`test_adapter_safety.py`)
+
+Test-first coverage for the three review gaps (ADR §15). Each maps to an approved
+requirement; RED indicates a genuine defect to fix in production later.
+
+| Group | Test | Requirement |
+|---|---|---|
+| Durable dest | APPROVED without `audit_dir` is never ACTIONABLE | §14, §15.1 |
+| Durable dest | unusable audit dir cannot bypass persistence | §15.1 |
+| Durable dest | APPROVED persisted audit file exists after the call | §14, §15.1 |
+| Durable dest | failing writer blocks actionable output | §14 |
+| Durable dest | ordinary valid audit path still approves | §15.1 |
+| Trader action | `trader_proposal=None` cannot be APPROVED/ACTIONABLE | §15.2 |
+| Trader action | missing action is R6 UNKNOWN; model rating preserved | §15.2 |
+| Malformed | non-dict `risk_portfolio` never ACTIONABLE | §15.3 |
+| Malformed | invalid snapshot schema/numeric fields never ACTIONABLE | §15.3 |
+| Malformed | malformed `target_position` never ACTIONABLE | §15.3 |
+
+**Performance (audit-inclusive):** `test_actual_adapter_overhead_p95_within_two_seconds`
+now passes a real temporary `audit_dir`, measures conversion + one evaluation + the
+durable write, asserts the write happened, and requires p95 ≤ 2000 ms. The pure-core
+benchmark is unchanged.
+
+**Baseline contract migration:** the six `tests/test_graph_end_to_end.py`
+assertions for runs without `risk_portfolio` now expect the approved effective
+signal `REVIEW`; the model rating is verified separately via `model_rating` where
+structured data exists. Unrelated assertions are preserved. This is the intentional,
+human-approved fail-closed behavior change (ADR §15.4).
+
+As of this turn: `test_adapter_safety.py` = 15 passed, 2 RED (§15.1, §15.2);
+`tests/risk_gate` = 237 passed, 2 failed, 1 xpassed; original regression = 1412
+passed (post-migration).

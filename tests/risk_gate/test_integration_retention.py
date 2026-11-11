@@ -352,9 +352,10 @@ def test_legacy_pre_gate_checkpoint_cannot_bypass_evaluation(tmp_path, monkeypat
 # ---------------------------------------------------------------------------
 
 
-def _bench_adapter(iterations=200):
-    """Measure the adapter's per-call overhead: input conversion + evaluation +
-    audit construction, over repeated offline runs. Returns (p50, p95) in ms."""
+def _bench_adapter(iterations=200, audit_dir=None):
+    """Measure the adapter's per-call overhead: input conversion + one evaluation
+    + the required durable audit write, over repeated offline calls. Returns
+    (p50, p95) in ms."""
     from tradingagents.risk_gate.adapter import apply_gate
 
     tp = _buy_proposal()
@@ -362,7 +363,7 @@ def _bench_adapter(iterations=200):
     samples = []
     for _ in range(iterations):
         start = time.perf_counter()
-        apply_gate("NVDA", e2e.TRADE_DATE, tp, pd, RISK_PORTFOLIO)
+        apply_gate("NVDA", e2e.TRADE_DATE, tp, pd, RISK_PORTFOLIO, audit_dir=audit_dir)
         samples.append((time.perf_counter() - start) * 1000.0)
     samples.sort()
     p50 = samples[len(samples) // 2]
@@ -371,11 +372,16 @@ def _bench_adapter(iterations=200):
 
 
 @pytest.mark.unit
-def test_actual_adapter_overhead_p95_within_two_seconds():
-    """[NFR-A1] The real gate-added overhead (adapter+evaluation+audit) p95 <= 2000 ms."""
-    p50, p95 = _bench_adapter(iterations=200)
-    print(f"\nrisk-gate adapter overhead: p50={p50:.4f}ms p95={p95:.4f}ms n=200")
+def test_actual_adapter_overhead_p95_within_two_seconds(tmp_path):
+    """[NFR-A1] The real gate-added overhead — adapter conversion, one evaluation,
+    and the durable audit **written to a real temporary directory** — p95 <= 2000 ms."""
+    audit_dir = tmp_path / "audit_bench"
+    p50, p95 = _bench_adapter(iterations=200, audit_dir=audit_dir)
+    print(f"\nrisk-gate adapter overhead (with durable audit): "
+          f"p50={p50:.4f}ms p95={p95:.4f}ms n=200")
     assert p95 <= 2000.0, f"adapter p95={p95:.4f}ms exceeds 2000ms"
+    # The benchmark actually exercised the durable write path.
+    assert list(audit_dir.glob("risk_audit_*.json")), "benchmark skipped the durable audit"
 
 
 @pytest.mark.unit

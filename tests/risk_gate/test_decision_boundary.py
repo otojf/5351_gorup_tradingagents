@@ -177,17 +177,17 @@ def _run_real_cli(tmp_path, monkeypatch, trader_proposal, portfolio_decision):
         def init_for_analysis(self, selected):
             self.selected_analysts = [a.lower() for a in selected]
 
-        def add_message(self, *a):
-            pass
+        def add_message(self, kind, content):
+            self.messages.append((0.0, kind, content))
 
-        def add_tool_call(self, *a):
-            pass
+        def add_tool_call(self, name, args):
+            self.tool_calls.append((0.0, name, args))
 
-        def update_report_section(self, *a):
-            pass
+        def update_report_section(self, section, content):
+            self.report_sections[section] = content
 
-        def update_agent_status(self, *a):
-            pass
+        def update_agent_status(self, agent, status):
+            self.agent_status[agent] = status
 
     class _NullLive:
         def __init__(self, *a, **k):

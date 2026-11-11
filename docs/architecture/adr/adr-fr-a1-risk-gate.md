@@ -470,3 +470,64 @@ The durable audit writer is defined by the Stage 2 adapter as
 `tradingagents.risk_gate.adapter.persist_audit(evaluation, ...)`; it must be called
 for **every** evaluation before the Portfolio Manager publishes an actionable
 recommendation.
+
+## 15. Stage 2 final safety review: durable destination, missing action, malformed inputs
+
+Source review of the Stage 2 implementation found three gaps; this section records
+the required contract (verified test-first in `tests/risk_gate/test_adapter_safety.py`).
+
+### 15.1 Durable audit destination is mandatory for ACTIONABLE output
+
+`persist_audit(evaluation, audit_dir=None)` returning an in-memory payload is **not**
+a durable audit. The approved contract (extends §14):
+
+- An `APPROVED`/`ACTIONABLE` recommendation may be published **only** if a real
+  durable audit record was written to disk before publication.
+- A missing (`None`) or unusable audit destination must **not** silently bypass
+  persistence: the decision must not be `ACTIONABLE` (fail closed by raising is
+  acceptable).
+- The rule applies to **every** evaluated decision, not just rejected ones; an
+  `APPROVED` decision must have an actual persisted audit file.
+
+Consequence: `apply_gate` must treat the audit destination as required for an
+actionable result — either the caller supplies a writable `audit_dir`, or the
+result is not actionable. The PM boundary always supplies the run's
+`results_dir/<ticker>/risk_audit`.
+
+### 15.2 A valid PortfolioDecision rating does not substitute for a missing Trader action
+
+When `trader_proposal` is `None` (or its action is missing/invalid), a valid PM
+rating must **not** supply the trade direction on its own:
+
+- The result must not be `APPROVED` or `ACTIONABLE`.
+- R6 input integrity must record the uncertainty (UNKNOWN), not PASS.
+- The model rating remains available in `model_rating` as evidence.
+
+This refines the R6 semantics in §5.2 and the adapter contract in §13.3: an
+unusable Trader action is an input-integrity gap even when the PM rating is valid.
+
+### 15.3 Malformed `risk_portfolio` handling
+
+Caller inputs are never trusted or invented. For non-dict `risk_portfolio`, invalid
+snapshot schema/numeric fields, or malformed `target_position`:
+
+- Prefer an auditable `NEEDS_REVIEW` when a safe evaluation can be constructed.
+- An explicit fail-closed exception is acceptable where safe evaluation or audit
+  persistence is impossible.
+- The result must **never** be `ACTIONABLE`.
+
+### 15.4 Baseline contract migration (approved)
+
+The six `tests/test_graph_end_to_end.py` assertions that expected the old model
+rating (`Overweight`) for runs **without** `risk_portfolio` are migrated to the
+approved fail-closed effective signal `REVIEW`. Unrelated assertions (graph
+completion, checkpoint recovery, state logs, memory, rendered decisions, agent
+execution) are preserved; where structured data exists the original model rating is
+verified separately via `model_rating`. This is an intentional, human-approved
+behavior change, not a regression.
+
+### 15.5 Implementation status
+
+The durable-destination rule (§15.1) and the missing-action R6 rule (§15.2) are
+currently **RED** in `test_adapter_safety.py` and await a production fix in a later
+approved turn. Tests were written first; no production code changed in this turn.

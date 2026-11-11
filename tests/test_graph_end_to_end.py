@@ -135,7 +135,12 @@ def test_a_full_run_reaches_a_logged_decision(tmp_path, monkeypatch, offline, st
 
     state, signal = graph.propagate("NVDA", TRADE_DATE)
 
-    assert signal == state["final_rating"] == "Overweight"
+    # FR-A1: without a risk_portfolio snapshot the gate fails closed, so the
+    # effective public signal is REVIEW (not the model rating). The model rating is
+    # preserved separately as evidence for structured runs.
+    assert signal == state["final_rating"] == "REVIEW"
+    if structured:
+        assert state["model_rating"] == "Overweight"
     for key in ("market_report", "sentiment_report", "news_report", "fundamentals_report",
                 "investment_plan", "trader_investment_plan", "final_trade_decision"):
         assert state[key].strip(), key
@@ -144,7 +149,8 @@ def test_a_full_run_reaches_a_logged_decision(tmp_path, monkeypatch, offline, st
                     "get_balance_sheet", "get_cashflow", "get_income_statement",
                     "get_insider_transactions", "ohlcv"}
     assert offline == tool_methods
-    assert [e["rating"] for e in graph.memory_log.load_entries()] == ["Overweight"]
+    # The memory log records the effective (risk-controlled) rating.
+    assert [e["rating"] for e in graph.memory_log.load_entries()] == ["REVIEW"]
 
 
 @pytest.mark.unit
@@ -157,7 +163,8 @@ def test_an_interrupted_run_resumes_from_its_checkpoint(tmp_path, monkeypatch, o
 
     _, signal = graph.propagate("NVDA", TRADE_DATE)
 
-    assert signal == "Overweight"
+    # FR-A1: no risk snapshot -> fail closed to REVIEW on resume too.
+    assert signal == "REVIEW"
     resumed_calls = len(model.calls) - calls_before
     full_run = ScriptedModel()
     _graph(tmp_path / "fresh", monkeypatch, full_run).propagate("NVDA", TRADE_DATE)
@@ -196,7 +203,8 @@ def test_a_debug_run_prints_the_analysts_work_and_reaches_the_same_decision(tmp_
 
     state, signal = graph.propagate("NVDA", TRADE_DATE)
 
-    assert signal == "Overweight"
+    # FR-A1: fail closed to REVIEW without a risk snapshot; model rating preserved.
+    assert signal == "REVIEW"
     assert state["market_report"].strip() and state["fundamentals_report"].strip()
     printed = capsys.readouterr().out
     assert "get_stock_data" in printed and "get_balance_sheet" in printed
@@ -264,7 +272,8 @@ def test_an_analyst_that_keeps_calling_tools_writes_its_report_at_the_limit(tmp_
     assert len(model.tool_turns) == 3 * 3   # three tool-using analysts, three rounds each
     for key in ("market_report", "news_report", "fundamentals_report"):
         assert final_state[key] == TEXT
-    assert rating == "Overweight"
+    # FR-A1: no risk snapshot -> fail closed to REVIEW.
+    assert rating == "REVIEW"
 
 
 @pytest.mark.unit
@@ -343,7 +352,8 @@ def test_a_settlement_failure_is_noted_and_the_run_goes_on(tmp_path, monkeypatch
     monkeypatch.setattr(graph, "settle_all_pending", locked)
     final_state, rating = graph.propagate("NVDA", TRADE_DATE)
 
-    assert rating == "Overweight"
+    # FR-A1: no risk snapshot -> fail closed to REVIEW.
+    assert rating == "REVIEW"
     assert "could not be settled" in final_state["memory_note"]
     report = write_report_tree(final_state, "NVDA", tmp_path / "report").read_text()
     assert "Memory log: Past decisions could not be settled" in report
