@@ -26,7 +26,12 @@ Source of truth for fields: `docs/req/requirements.yaml`.
   real-input reproducibility (FR-E4 recording/replay) remains out of scope.
 - FR-E2 is `partial`: the manifest exists but degradations/risk verdicts/
   traceability are `null` until owners A/B/D merge.
-- FR-E3 / INV-E1 are `draft`: gates are not yet wired into CI (Phase 4).
+- FR-E3 / INV-E1 are `partial`: all six gates are wired into CI and pass on
+  PR #6 (run 43048019537); branch protection requires the 9 checks plus one
+  approving review. A real bad PR (#7) was blocked by gate-3 schema (run
+  43048868148). The other five gates' bad-input evidence is local
+  (`tests/test_ci_gates.py`), not yet separate live PRs; the secret scan is a
+  manual check, not an automated gate.
 - Runtime monitors (`eval_pass_rate`, `manifest_completeness`, `ci_gate_status`,
   `gate_failures`) are named here for the trace matrix; they are not yet emitted
   by the harness. The manifest is the current per-run record.

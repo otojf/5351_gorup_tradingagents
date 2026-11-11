@@ -29,12 +29,13 @@ python -m ruff check eval tests/test_eval_harness.py
 
 ## Status
 
-Captured (local, 2026-11-11). CI pending; branch protection documented in
-`branch-protection.md` (not yet configured).
+Captured locally and on GitHub CI, 2026-11-11. PR #6 passed all nine checks;
+branch protection is configured; temporary bad PR #7 was blocked by gate-3.
 
 ## What these results establish
 
 - The registry validates against its JSON schema.
 - The eval harness is deterministic and repeatable under the scripted source.
 - The six gate scripts fire on deliberately bad local inputs
-  (`tests/test_ci_gates.py`); real GitHub bad-PR evidence is still pending.
+  (`tests/test_ci_gates.py`); real PR #7 demonstrated gate-3 blocking. Live
+  bad-PR demos for the other five gates remain local.

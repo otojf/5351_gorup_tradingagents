@@ -39,10 +39,11 @@ only orients you:
 - Proven: deterministic rating/report/token output under a fixed scripted
   source; per-run isolation; manifest completeness for available fields.
 - Not proven: real-input reproducibility (FR-E4 recording/replay).
-- Six gate scripts and the CI workflow are wired; branch protection and real
-  GitHub CI / bad-PR evidence are still pending.
+- Six gate scripts and the CI workflow are wired; PR #6 runs all nine checks
+  green. Branch protection (9 checks + one review) is configured, and a real
+  bad PR (#7) was blocked by gate-3.
 
 ## 3. Status
 
-See the trace matrix for requirement-level status. FR-E1/FR-E2 are `partial`;
-FR-E3/INV-E1 are `draft`.
+See the trace matrix for requirement-level status. FR-E1 is `implemented`;
+FR-E2, FR-E3 and INV-E1 are `partial`.

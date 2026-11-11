@@ -206,7 +206,7 @@ requirements:
           test: "test_ci_six_gates"
           monitor: "ci_gate_status"
           demo: "故意坏 PR 被对应 gate 拦下"
-        status: draft
+        status: partial
       - id: INV-E1
         type: invariant
         category: invariant
@@ -219,7 +219,7 @@ requirements:
           test: "test_invariant_no_merge_with_failing_gate"
           monitor: "gate_failures"
           demo: "分支保护配置与坏 PR 拦截"
-        status: draft
+        status: partial
     verification:
       test: "test_golden_set"
       monitor: "eval_pass_rate"

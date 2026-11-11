@@ -89,7 +89,8 @@ entries:
       Phase 4 CI gates: six local gate scripts under scripts/ci/ with bad-input
       self-tests (tests/test_ci_gates.py); wired the six gate jobs into
       .github/workflows/ci.yml; added PyYAML to dev extras; documented the gates
-      and evidence. Branch protection is not configured yet.
+      and evidence. Branch protection is configured (9 checks + one review);
+      temporary bad PR #7 was blocked by gate-3 and was closed/deleted.
     files_changed:
       - scripts/ci/
       - tests/test_ci_gates.py

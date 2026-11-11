@@ -4,9 +4,10 @@ Branch protection for `main` must require passing CI, and changes to
 safety-critical paths must require human review (course D7). This document lists
 the **exact** required-check names and a command to configure them.
 
-Status: **not yet configured.** Configuration must be done by a repository admin
-(or from the Windows side where `gh` is authenticated with admin rights). It is
-not done by these scripts and is not pushed by the agent.
+Status: **configured on 2026-11-11** from the Windows side with an authenticated
+admin `gh`. Verified state: `strict=true`, the 9 required contexts below, one
+approving review, and `enforce_admins=true`. The temporary bad PR #7 was blocked
+by gate-3 (see `test-results.txt`).
 
 ## Required check names
 
@@ -65,8 +66,10 @@ gh api repos/otojf/5351_gorup_tradingagents/commits/<sha>/check-runs --jq '.chec
 
 ## Who executes this
 
-- Requires **Windows side or a repo admin** with an authenticated `gh`.
-- The agent does not configure branch protection and does not push.
-- The `verify` step: open a knowingly-bad PR (e.g., a commit that fails the
-  schema gate) and confirm GitHub blocks the merge with "Required statuses must
-  pass".
+- Configured on 2026-11-11 from the Windows side with an authenticated admin
+  `gh`.
+- Re-run the command if the required check names change; keep
+  `enforce_admins=true` and one approving review.
+- The `verify` step was exercised by temporary PR #7: gate-3 failed and the PR
+  could not merge; it was closed and its branch deleted (see
+  `test-results.txt`).

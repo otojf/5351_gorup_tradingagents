@@ -12,9 +12,9 @@
 
 ## Blocking gates (D7)
 
-Six blocking gates are implemented as local scripts under `scripts/ci/`. They are
-run here by hand; wiring them into `.github/workflows/ci.yml` as required checks
-(and branch protection) is the next step (Phase 4b).
+Six blocking gates are implemented under `scripts/ci/` and wired into
+`.github/workflows/ci.yml`. PR #6 runs all nine required checks; branch
+protection (9 checks + one approving review) is configured on `main`.
 
 | # | Gate | Script / command | What it checks | Known gaps (stated, not faked) |
 |---|---|---|---|---|
@@ -40,10 +40,10 @@ The six gates are wired into `.github/workflows/ci.yml`:
 - `gate-5-regression` keeps the Python 3.11–3.14 matrix (4 checks; the
   `America/New_York` tz is merged into the 3.12 run, not a fifth check).
 
-Branch protection must require these checks (9 total: 5 single jobs + 4
-matrix-expanded gate‑5 checks) and one approving review for safety-critical
-paths. This is **not yet configured**; the exact names and the `gh api` command
-are in `docs/evidence/e1/verification/branch-protection.md`.
+Branch protection requires these checks (9 total: 5 single jobs + 4
+matrix-expanded gate‑5 checks) and one approving review. It is configured on
+`main`; the exact names and the `gh api` command are in
+`docs/evidence/e1/verification/branch-protection.md`.
 
 ## Required-structure mapping
 
