@@ -1,7 +1,8 @@
 # ADR-FR-A1: Deterministic Risk Gate
 
-- Status: Proposed (tests and design approved for authoring; production implementation
-  blocked pending review of the written tests)
+- Status: Implemented on the `feat/fr-a1-risk-gate` feature branch, pending team
+  review and merge. (The test-first decisions below were made and approved before
+  implementation and are preserved as the historical record.)
 - Date: 2026-11-11
 - Owner: A
 - Requirement: FR-A1 (with INV-A1, NFR-A1, NFR-A2)
