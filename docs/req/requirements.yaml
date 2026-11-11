@@ -150,13 +150,7 @@ requirements:
     statement: >-
       固定案例评测必须可复现：同一 commit/config/data 下评级稳定、指标波动 <= 5%；
       离线评测必须 <= 10 分钟；CI 必须配置六道 blocking gates。
-    fit_criterion: >-
-      3 次重复运行评级 3/3 一致，token/延迟波动 <= 5%；
-      固定 golden set 3–5 个案例 100% 执行并导出 before/after 对比表；
-      每次运行 manifest 完整（commit、model、prompt hash、config、data snapshot、
-      tokens、latency、degradations、risk verdicts、traceability）；
-      离线套件 p95 <= 10 分钟且 0 次网络调用；6/6 blocking gates 配置，
-      每个 gate 用故意坏 PR 验证能拦。
+    # fit_criterion intentionally removed for the gate-3 bad-PR demo
     priority: must
     owner: E
     component: "eval_harness"
