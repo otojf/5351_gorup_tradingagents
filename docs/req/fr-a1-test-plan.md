@@ -177,6 +177,19 @@ existing-position and trade data → not `APPROVED` (mandatory); exact risk-redu
 criteria are pending team confirmation. The sector cap applies to the **affected
 sector** of the target stock in v1 (scope pending confirmation).
 
+**As-implemented rule ownership (no semantic change, just allocation):**
+- R2 checks the weight cap and the *genuine increase* clause (UNKNOWN when the
+  buy does not increase the position).
+- R3 checks projected affected-sector exposure (UNKNOWN when a holding lacks a
+  sector, or the target sector is unknown).
+- R6 checks input integrity that spans rules: contradictory/ambiguous direction,
+  non-finite decision prices, an inconsistent or stale portfolio snapshot, and an
+  unaffordable cash-funded purchase. In v1, an unsupported short/SELL is recorded
+  by R6 as UNKNOWN (pending team confirmation), so it cannot be approved.
+- Decision numeric fields are representable as `inf`/`nan` at the model layer so a
+  malformed value degrades to UNKNOWN (NEEDS_REVIEW); it can never become a usable
+  number or an approval.
+
 ## 3. Requirement traceability
 
 | Requirement | Contract element | Test file |
