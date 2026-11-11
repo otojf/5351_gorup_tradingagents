@@ -1,0 +1,112 @@
+schema_version: "1.0"
+project: "CS5351 Group Project - TradingAgents"
+description: >-
+  AI-use log (D1). Every code or prompt change must be traceable to an AI coding
+  agent session. A PR that changes code or prompts without a matching entry here
+  is blocked by the AI-use-log gate (FR-E3 gate 6).
+
+entries:
+  - commit_range: "46bde74..feat/nfr-e1-eval"
+    date: "2026-11-11"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: "transcripts/60572233-HUANG-SIYING.md"
+    session_id: "ses_e35391b77ffeQQoGyxETkYqTMJ"
+    summary: >-
+      Built the NFR-E1 offline evaluation harness: slices 1-3 (golden set,
+      offline runner, run manifest, run_suite isolation, before/after compare)
+      and tests/test_eval_harness.py, plus the annotated session transcript.
+    files_changed:
+      - eval/
+      - tests/test_eval_harness.py
+      - transcripts/60572233-HUANG-SIYING.md
+    human_approved_by: "HUANG SIYING (60572233)"
+    human_review_ref: "transcripts/60572233-HUANG-SIYING.md (Intervention index)"
+    status: draft
+
+  - commit_range: "46bde74..feat/nfr-e1-eval"
+    date: "2026-11-11"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
+      exported to transcripts/)
+    session_id: "ses_e34f0999dffe323Un98HwNnxnO"
+    summary: >-
+      Requirements/architecture artifacts for NFR-E1: nested registry entries
+      (FR-E1/FR-E2/FR-E3/INV-E1), req-schema.json, trace matrix, invariants,
+      evidence/e1 skeleton, repository-structure mapping, ADR-001, this AI-use
+      log, and the pyproject dev-extras dependency.
+    files_changed:
+      - docs/req/requirements.yaml
+      - docs/req/req-schema.json
+      - docs/architecture/trace-matrix.md
+      - docs/architecture/invariants.md
+      - docs/architecture/repository-structure-mapping.md
+      - docs/architecture/adr/001-eval-harness.md
+      - docs/evidence/e1/
+      - docs/ai-use-log.yaml
+      - pyproject.toml
+    human_approved_by: "HUANG SIYING (60572233)"
+    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    status: draft
+
+  - commit_range: "46bde74..feat/nfr-e1-eval"
+    date: "2026-11-11"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
+      exported to transcripts/)
+    session_id: "ses_e34f0999dffe323Un98HwNnxnO"
+    summary: >-
+      Phase 3 eval test fixes: runner records tool-call args from AIMessages into
+      the manifest; run_suite rejects a single EvalContext for multiple cases
+      (single case allows instance or factory) with a Callable type annotation;
+      added a 3-case before/after compare test. FR-E1 status -> implemented.
+      Follow-up correction: tool_calls_total now counts finished ToolMessages
+      (status=="ok") so it equals tokens.tool_calls (12, not the 24 that also
+      included "requested" events); added tool_call_requests_total for the
+      request count; compare table now reports 12.
+    files_changed:
+      - eval/runner.py
+      - tests/test_eval_harness.py
+      - docs/req/requirements.yaml
+      - docs/architecture/trace-matrix.md
+    human_approved_by: "HUANG SIYING (60572233)"
+    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    status: draft
+
+  - commit_range: "46bde74..feat/nfr-e1-eval"
+    date: "2026-11-11"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
+      exported to transcripts/)
+    session_id: "ses_e34f0999dffe323Un98HwNnxnO"
+    summary: >-
+      Phase 4 CI gates: six local gate scripts under scripts/ci/ with bad-input
+      self-tests (tests/test_ci_gates.py); wired the six gate jobs into
+      .github/workflows/ci.yml; added PyYAML to dev extras; documented the gates
+      and evidence. Branch protection is configured (9 checks + one review);
+      temporary bad PR #7 was blocked by gate-3 and was closed/deleted.
+    files_changed:
+      - scripts/ci/
+      - tests/test_ci_gates.py
+      - .github/workflows/ci.yml
+      - README.md
+      - pyproject.toml
+      - docs/evidence/e1/test-approval.md
+      - docs/evidence/e1/verification/
+      - docs/ai-use-log.yaml
+    human_approved_by: "HUANG SIYING (60572233)"
+    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
+    status: draft
+
+notes: >-
+  Additional per-commit entries are appended as Phase 3/4 work lands. Both
+  human_approved_by fields are intentionally TODO for the team to fill; they are
+  not auto-generated. The second session's transcript has not been exported yet;
+  session_ref records the session id with "export pending" rather than pointing
+  at a nonexistent file.

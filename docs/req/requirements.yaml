@@ -1,6 +1,6 @@
 schema_version: "1.0"
 project: "CS5351 Group Project - TradingAgents"
-updated: "2026-11-09"
+updated: "2026-11-11"
 source_document: "需求与分工-TradingAgents.md"
 options_file: "requirements-options.yaml"
 notes: >-
@@ -163,10 +163,63 @@ requirements:
     source: >-
       基线缺口：没有固定评测集；没有 run manifest；没有 CI gates；demo 不可复现。
     supporting_requirements:
-      - FR-E1
-      - FR-E2
-      - FR-E3
-      - INV-E1
+      - id: FR-E1
+        type: functional
+        category: functional_behavior
+        statement: >-
+          系统必须提供固定 golden set 3–5 个 (ticker, date) 及脚本化数据快照；
+          一条命令跑完并导出 before/after 对比表（CSV/MD）。
+        fit_criterion: >-
+          100% golden 案例执行；3 个不同 (ticker, date) 案例存在；
+          before/after 对比表 CSV/MD 均生成且含每案例真实差异。
+        verification:
+          test: "test_golden_set_has_three_distinct_cases"
+          monitor: "eval_pass_rate"
+          demo: "before/after 对比表"
+        status: implemented
+      - id: FR-E2
+        type: functional
+        category: functional_behavior
+        statement: >-
+          每次评测运行必须记录 manifest：commit、model、prompt hash、config、
+          data snapshot、tokens、latency、degradations、risk verdicts 和 traceability。
+        fit_criterion: >-
+          100% manifest 必填字段存在（commit、model、config_hash、prompt_snapshot、
+          data_snapshot、tokens、latency_s、tool_calls）；缺失字段显式记 null 并在
+          unavailable_sources 给出原因，不得伪造；同 manifest 数据重跑评级稳定。
+        verification:
+          test: "test_run_one_golden_case_returns_rating_and_manifest"
+          monitor: "manifest_completeness"
+          demo: "manifest 展示与不可用字段原因"
+        status: partial
+      - id: FR-E3
+        type: functional
+        category: functional_behavior
+        statement: >-
+          CI 必须配置六道 blocking gates：test approval、static analysis、
+          schema、semantic eval、regression 和 AI-use log。
+        fit_criterion: >-
+          6/6 gate 在 CI 中配置且在 PR 上阻断；每个 gate 用故意坏 PR 验证能拦；
+          好 PR 全过；未覆盖的子项（type-check、contract、security、permission）
+          在 README 与 CI 注释中显式列出，不假装覆盖。
+        verification:
+          test: "test_ci_six_gates"
+          monitor: "ci_gate_status"
+          demo: "故意坏 PR 被对应 gate 拦下"
+        status: partial
+      - id: INV-E1
+        type: invariant
+        category: invariant
+        statement: >-
+          任一 blocking gate 失败不得合并；仓库不得包含 secret。
+        fit_criterion: >-
+          分支保护要求 6 项检查；secret 扫描 0 发现；坏 PR 0 合并；
+          回归套件 invariant violation = 0。
+        verification:
+          test: "test_invariant_no_merge_with_failing_gate"
+          monitor: "gate_failures"
+          demo: "分支保护配置与坏 PR 拦截"
+        status: partial
     verification:
       test: "test_golden_set"
       monitor: "eval_pass_rate"
