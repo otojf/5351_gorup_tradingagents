@@ -102,6 +102,7 @@ class _Client:
 @pytest.fixture
 def offline(monkeypatch, tmp_path):
     """Every vendor answers offline; returns the set of router methods called."""
+    monkeypatch.setenv("FRED_API_KEY", "synthetic-test-only")
     called: set[str] = set()
     for method, vendors in router.VENDOR_METHODS.items():
         for vendor in vendors:

@@ -1,0 +1,28 @@
+schema_version: "1.0"
+project: "CS5351 Group Project - TradingAgents"
+entries:
+  - commit_range: "46bde74..feat/fr-c2-vendor-skip"
+    date: "2026-11-12"
+    owner: "FR-C2 contributor; full name/student ID not supplied"
+    agent: "Codex (current chat); not OpenCode"
+    session_ref: "docs/evidence/fr-c2/session-summary.md"
+    summary: >-
+      Implement run-scoped missing-credential skips, concurrent log deduplication,
+      and ordinary/debug/stream lifecycle integration. Add offline acceptance and
+      full-graph regression tests. Preserve standalone routing compatibility and
+      configured supplier fallback. No real credential or paid LLM was used.
+    files_changed:
+      - tradingagents/dataflows/vendor_run_state.py
+      - tradingagents/dataflows/router.py
+      - tradingagents/graph/trading_graph.py
+      - tests/test_vendor_skip_on_missing_key.py
+      - tests/test_graph_end_to_end.py
+      - tests/test_fr_c2_graph.py
+    human_approved_by: "User in this Codex chat"
+    human_review_ref: "docs/evidence/fr-c2/test-approval.md"
+    status: "implementation_pending_review"
+notes: >-
+  This task-local fragment avoids replacing the shared AI-use log being added
+  by the E1 branch. Before integration with its gate-6 workflow, append this
+  entry to docs/ai-use-log.yaml while preserving other contributors' entries.
+  session_ref is an annotated summary, not a full raw session transcript.
