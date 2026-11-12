@@ -6,6 +6,7 @@ from tradingagents.dataflows.errors import (
     VendorNotConfiguredError,
     VendorUnavailableError,
 )
+from tradingagents.dataflows.vendor_run_state import current_vendor_run
 from tradingagents.dataflows.vendors.alpha_vantage import (
     get_balance_sheet as get_alpha_vantage_balance_sheet,
     get_cashflow as get_alpha_vantage_cashflow,
@@ -228,7 +229,12 @@ def route_to_vendor(method: str, *args, **kwargs):
     last_unavailable: VendorUnavailableError | None = None
     failed: Exception | None = None     # a vendor that raised something untyped
     first_error: Exception | None = None
+    run_state = current_vendor_run()
     for vendor in vendor_chain:
+        if run_state is not None and (reason := run_state.skip_reason(vendor, method)):
+            if first_error is None:
+                first_error = VendorNotConfiguredError(f"Vendor '{vendor}' skipped: {reason}")
+            continue
         vendor_impl = VENDOR_METHODS[method][vendor]
         impl_func = vendor_impl[0] if isinstance(vendor_impl, list) else vendor_impl
 
@@ -241,9 +247,14 @@ def route_to_vendor(method: str, *args, **kwargs):
             last_unavailable = e
             continue
         except VendorNotConfiguredError as e:
-            logger.warning("Vendor %r not configured for %s; trying next vendor.", vendor, method)
+            config_error = e
+            if run_state is not None and category in OPTIONAL_CATEGORIES:
+                reason = run_state.record_not_configured(vendor, method)
+                config_error = VendorNotConfiguredError(f"Vendor '{vendor}' skipped: {reason}")
+            else:
+                logger.warning("Vendor %r not configured for %s; trying next vendor.", vendor, method)
             if first_error is None:
-                first_error = e  # Surface it if no other vendor can serve the call.
+                first_error = config_error  # Surface it if no other vendor can serve the call.
             continue
         except NoMarketDataError as e:
             last_no_data = e  # No data here; another configured vendor may have it
@@ -287,7 +298,10 @@ def route_to_vendor(method: str, *args, **kwargs):
     # abort the run.
     if first_error is not None:
         if category in OPTIONAL_CATEGORIES:
-            logger.warning("Optional %s unavailable for %s: %s", category, method, first_error)
+            # A run-scoped missing-config event was already logged once. Other
+            # failures keep their diagnostics and existing fallback behavior.
+            if run_state is None or failed is not None or not isinstance(first_error, VendorNotConfiguredError):
+                logger.warning("Optional %s unavailable for %s: %s", category, method, first_error)
             return (
                 f"DATA_UNAVAILABLE: optional {category} could not be retrieved "
                 f"({first_error}). Proceed without it; do not fabricate values."
