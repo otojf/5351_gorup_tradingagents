@@ -1,0 +1,26 @@
+{
+  "version": "0.7.1",
+  "llm_provider": "deepseek",
+  "deep_think_provider": "deepseek",
+  "deep_think_llm": "CS5351/DeepSeek-V4-Flash",
+  "quick_think_provider": "deepseek",
+  "quick_think_llm": "CS5351/DeepSeek-V4-Flash",
+  "analysts": [
+    "market",
+    "social",
+    "news",
+    "fundamentals"
+  ],
+  "max_debate_rounds": 1,
+  "max_risk_discuss_rounds": 1,
+  "output_language": "English",
+  "data_vendors": {
+    "core_stock_apis": "yfinance",
+    "technical_indicators": "yfinance",
+    "fundamental_data": "sec_edgar,yfinance",
+    "news_data": "yfinance",
+    "macro_data": "fred",
+    "prediction_markets": "polymarket"
+  },
+  "tool_vendors": {}
+}
