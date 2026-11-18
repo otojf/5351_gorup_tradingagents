@@ -197,8 +197,14 @@ def no_data_available(error: NoMarketDataError) -> str:
     )
 
 
-def route_to_vendor(method: str, *args, **kwargs):
-    """Route method calls to appropriate vendor implementation with fallback support."""
+def route_to_vendor(method: str, *args, state=None, **kwargs):
+    """Route method calls to appropriate vendor implementation with fallback support.
+
+    ``state`` is a per-run :class:`RunSkipState` (optional). When provided, a
+    vendor that reports a missing key is skipped for the rest of the run: its data
+    function is not entered again, no retry is attempted, and exactly one skip
+    notice is logged — then the chain continues to the next vendor.
+    """
     category = get_category_for_method(method)
     vendor_config = get_vendor(category, method)
     primary_vendors = [v.strip() for v in vendor_config.split(',')]
@@ -224,14 +230,58 @@ def route_to_vendor(method: str, *args, **kwargs):
     else:
         vendor_chain = all_available_vendors
 
+    if state is None:
+        from tradingagents.dataflows.vendor_skip import RunSkipState
+        state = RunSkipState()
+
     last_no_data: NoMarketDataError | None = None
     last_unavailable: VendorUnavailableError | None = None
     failed: Exception | None = None     # a vendor that raised something untyped
     first_error: Exception | None = None
+    skip_seen = False                   # a missing-key skip occurred this route call
     for vendor in vendor_chain:
         vendor_impl = VENDOR_METHODS[method][vendor]
         impl_func = vendor_impl[0] if isinstance(vendor_impl, list) else vendor_impl
+        skip_key = f"{vendor}:not_configured"
 
+        role, slot = state.acquire(skip_key)
+        if role == "skipped":
+            # Already known missing credentials this run: do not enter the data
+            # function, do not retry, keep going to the next vendor. Record the
+            # reason so an all-skipped chain still yields the category sentinel.
+            skip_seen = True
+            if first_error is None:
+                first_error = VendorNotConfiguredError(
+                    f"{vendor} not configured for {method} (skipped this run)"
+                )
+            continue
+        if role == "waiter":
+            decided = state.wait(slot)
+            if decided is True:
+                skip_seen = True
+                if first_error is None:
+                    first_error = VendorNotConfiguredError(
+                        f"{vendor} not configured for {method} (skipped this run)"
+                    )
+                continue      # the winner found it unconfigured: skip this vendor
+            if decided is None:
+                # The winner never finished in time. Do NOT enter the data
+                # function (that could double-enter the source); surface an
+                # explicit diagnostic and fall back. Not registered as missing
+                # credentials.
+                logger.warning(
+                    "Vendor %r unconfirmed for %s after waiting; skipping this "
+                    "attempt without calling it.", vendor, method,
+                )
+                if last_unavailable is None:
+                    last_unavailable = VendorUnavailableError(
+                        f"{vendor} did not confirm configuration for {method} in time"
+                    )
+                continue
+            # decided is False (the winner found a key): fall through to the
+            # normal call path, sharing the same unified error handling below.
+
+        skipped_here = False
         try:
             return impl_func(*args, **kwargs)
         except VendorUnavailableError as e:
@@ -241,7 +291,8 @@ def route_to_vendor(method: str, *args, **kwargs):
             last_unavailable = e
             continue
         except VendorNotConfiguredError as e:
-            logger.warning("Vendor %r not configured for %s; trying next vendor.", vendor, method)
+            skipped_here = True
+            skip_seen = True
             if first_error is None:
                 first_error = e  # Surface it if no other vendor can serve the call.
             continue
@@ -257,6 +308,15 @@ def route_to_vendor(method: str, *args, **kwargs):
                 first_error = e
             failed = e
             continue
+        finally:
+            # The winner publishes its outcome and wakes waiters regardless of
+            # return / continue / raise. The ONE run-wide skip notice is emitted
+            # here, only when this is the first time the vendor is skipped.
+            if role == "winner" and state.finish(skip_key, slot, skipped=skipped_here):
+                logger.warning(
+                    "Vendor %r not configured for %s; skipping it for this run.",
+                    vendor, method,
+                )
 
     # A vendor that throttled or failed the request never said whether it has
     # the symbol, so no other vendor's "no data" can speak for the whole chain:
@@ -287,7 +347,9 @@ def route_to_vendor(method: str, *args, **kwargs):
     # abort the run.
     if first_error is not None:
         if category in OPTIONAL_CATEGORIES:
-            logger.warning("Optional %s unavailable for %s: %s", category, method, first_error)
+            # A missing-key skip was already logged once above; do not repeat it.
+            if not skip_seen:
+                logger.warning("Optional %s unavailable for %s: %s", category, method, first_error)
             return (
                 f"DATA_UNAVAILABLE: optional {category} could not be retrieved "
                 f"({first_error}). Proceed without it; do not fabricate values."

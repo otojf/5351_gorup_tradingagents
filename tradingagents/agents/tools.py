@@ -6,6 +6,7 @@ and never serves data past it, whatever date the model asks for.
 
 from typing import Annotated, Literal
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 
@@ -244,6 +245,7 @@ def get_macro_indicators(
         int | None, "Trailing window length in days; omit for a 1-year window"
     ] = None,
     trade_date: Annotated[str, InjectedState("trade_date")] = "",
+    config: RunnableConfig = None,
 ) -> str:
     """
     Retrieve a macroeconomic indicator time series from FRED (Federal Reserve
@@ -261,7 +263,11 @@ def get_macro_indicators(
     Returns:
         str: A formatted markdown report of the macro series
     """
-    return route_to_vendor("get_macro_indicators", indicator, as_of(curr_date, trade_date), look_back_days)
+    state = ((config or {}).get("configurable") or {}).get("fr_skip_state")
+    return route_to_vendor(
+        "get_macro_indicators", indicator, as_of(curr_date, trade_date), look_back_days,
+        state=state,
+    )
 
 
 @tool

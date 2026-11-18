@@ -1,0 +1,83 @@
+# AI 使用日志 —— TradingAgents FR-C2
+# 说明：记录真实使用的工具、模型、会话与改动；不编造 commit（本任务未产生新 commit）。
+
+student:
+  id: "60662195"
+  name: "RenLongteng"
+
+task:
+  id: "FR-C2"
+  title: "未配置/无凭据数据源跳过并记录（每次运行零重试、一条跳过日志）"
+  repository: "TradingAgents（本工作区 team-fr-c2-opencode）"
+
+tool:
+  name: "OpenCode"
+  kind: "CLI"
+  version: "1.19.5"
+
+model:
+  provider: "cityu"
+  display_name: "CityU CSLab / CS5351 DeepSeek V4 Flash"
+  model_id: "CS5351/DeepSeek-V4-Flash"
+
+session:
+  id: "ses_e16f9644effeypE3kMR6Y2qEIj"
+  slug: "swift-circuit"
+  directory: "/mnt/c/Users/R/Documents/Codex/2026-11-05/ban/work/team-fr-c2-opencode"
+  transcript: "transcripts/60662195-RenLongteng.md"
+  export_local_only: "docs/evidence/fr-c2/session-export.original.json"
+
+commit:
+  # 本任务未产生新 commit，也未提交/推送。
+  produced_new_commit: false
+  base_commit: "46bde74f71af6ca6a92e52a20dad5711af30cd67"
+  base_commit_subject: "chore: TradingAgents v0.7.1 baseline and requirements options"
+
+files_modified:
+  - path: "tradingagents/dataflows/vendor_skip.py"
+    change: "added"
+    role: "RunSkipState：锁内原子 acquire/finish/wait，每次运行一个局部对象"
+  - path: "tradingagents/dataflows/vendors/fred.py"
+    change: "modified"
+    role: "get_api_key 空白/空串视为未配置；不记跳过日志"
+  - path: "tradingagents/dataflows/router.py"
+    change: "modified"
+    role: "route_to_vendor 加 state；角色化跳过；单一日志；等待超时不调用 vendor；跳过后继续 fallback"
+  - path: "tradingagents/agents/tools.py"
+    change: "modified"
+    role: "get_macro_indicators 读取 configurable[fr_skip_state] 传给 router"
+  - path: "tradingagents/graph/trading_graph.py"
+    change: "modified"
+    role: "_attach_skip_state 复制 config；propagate/debug/stream_run 的运行状态传递"
+
+tests_added:
+  - "tests/test_fr_c2_probe.py"
+  - "tests/test_fr_c2_acceptance.py"
+  - "tests/test_fr_c2_paths.py"
+
+docs_added:
+  - "docs/req/fr-c2-plan.md"
+  - "docs/evidence/fr-c2/configurable-probe.md"
+  - "docs/evidence/fr-c2/test-first.md"
+  - "docs/evidence/fr-c2/implementation-verification.md"
+  - "docs/evidence/fr-c2/handoff.md"
+  - "docs/evidence/fr-c2/session-export.md"
+  - "transcripts/60662195-RenLongteng.md"
+  - "docs/ai-use-log.yaml"
+
+verification:
+  fr_c2_targeted: "81 passed, 8 subtests passed"
+  full_offline_regression: "1438 passed, 1 skipped, 1 deselected"
+  lint: "ruff check: All checks passed"
+  notes:
+    - "1 skipped 因可选依赖 langchain_aws 未安装（环境原因）"
+    - "1 deselected 为默认 -m 'not integration'"
+    - "所有测试使用模拟数据/脚本化模型，未读取真实凭据、未联网"
+
+review:
+  items_raised_by_review:
+    - "放弃 ContextVar[frozenset]+GIL 的并发去重方案，改为每次运行独立的共享状态对象 + 锁保护原子 acquire/finish"
+    - "_tool_request_counter 误计数据源进入次数，改为在 router 入口按工具请求计数"
+    - "等待超时（wait 返回 None）不应进入数据源，改走明确诊断 + fallback，不登记跳过"
+    - "_attach_skip_state 修改调用者 config，复用同一 config 的两次运行共享状态；改为复制 config"
+
