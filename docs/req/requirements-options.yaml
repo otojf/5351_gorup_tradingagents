@@ -367,10 +367,10 @@ requirements:
     type: functional
     category: functional_behavior
     statement: >-
-      结构化输出无解析结果或校验失败时必须重试 1 次；仍失败则标 DEGRADED，
-      并继续运行。
+      结构化输出无解析结果或校验失败时必须重试 2 次；重试期间标记 RETRY 中间态并继续；
+      重试全部失败则标 DEGRADED、降级为自由文本并继续；降级后生成的报告必须显式标注。
     fit_criterion: >-
-      强制失败 fixture 触发 1 次重试；报告/日志有 DEGRADED；
+      强制失败 fixture 触发 2 次重试（最多 3 次调用）；报告/日志有 DEGRADED；
       0 次无标记降级。
     priority: must
     owner: D

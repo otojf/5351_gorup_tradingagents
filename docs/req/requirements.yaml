@@ -116,11 +116,12 @@ requirements:
     type: functional
     category: functional_behavior
     statement: >-
-      结构化输出无解析结果或校验失败时必须重试 1 次；仍失败则标 DEGRADED 并继续；
-      不允许静默降级；工具调用必须被准确计数并记录工具名、开始/结束、状态和次数。
+      结构化输出无解析结果或校验失败时必须重试 2 次；重试期间标记 RETRY 中间态并继续；
+      重试全部失败则标 DEGRADED、降级为自由文本并继续；不允许静默降级；
+      降级后生成的报告必须显式标注，避免用户无条件相信报告内容。
     fit_criterion: >-
       10 次运行 0 次 json_schema 调用；结构化输出 schema 校验通过率 >= 95%；
-      强制失败 fixture 触发 1 次重试且报告/日志有 DEGRADED；
+      强制失败 fixture 触发 2 次重试（最多 3 次调用）且报告/日志有 DEGRADED；
       20 次强制失败 0 次静默降级；工具调用计数与插桩真值误差为 0；
       缓存数据测试至少 1 次调用。
     priority: must

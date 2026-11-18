@@ -50,12 +50,17 @@ Write these sections, in this order, starting with the recommendation on its own
 
 {NO_EXTERNAL_TOOLS}""" + get_language_instruction()
 
+        degradations: list[dict] = []
+
         investment_plan = invoke_structured_or_freetext(
             structured_llm,
             llm,
             prompt,
             render_research_plan,
             "Research Manager",
+            on_degraded=lambda outcome: degradations.append(
+                outcome.as_event("Research Manager", "2_research/manager.md")
+            ),
         )
 
         new_investment_debate_state = {
@@ -69,6 +74,7 @@ Write these sections, in this order, starting with the recommendation on its own
         return {
             "investment_debate_state": new_investment_debate_state,
             "investment_plan": investment_plan,
+            "structured_degradations": degradations,
         }
 
     return research_manager_node

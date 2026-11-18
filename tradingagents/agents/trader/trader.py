@@ -82,17 +82,23 @@ def create_trader(llm):
             },
         ]
 
+        degradations: list[dict] = []
+
         trader_plan = invoke_structured_or_freetext(
             structured_llm,
             llm,
             messages,
             render_trader_proposal,
             "Trader",
+            on_degraded=lambda outcome: degradations.append(
+                outcome.as_event("Trader", "3_trading/trader.md")
+            ),
         )
 
         return {
             "messages": [AIMessage(content=trader_plan)],
             "trader_investment_plan": trader_plan,
+            "structured_degradations": degradations,
         }
 
     return trader_node
