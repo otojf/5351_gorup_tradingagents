@@ -73,6 +73,10 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .run dt { color: var(--muted); }
 .run dd { margin: 0; overflow-wrap: anywhere; }
 .run .note dd { color: var(--down); }
+.run .degraded-note { color: var(--down); font-weight: 600; }
+.degraded-warning { margin: 0.4rem 0 1rem; padding: 0.6rem 0.8rem; border-left: 4px solid var(--down);
+  background: var(--wash); color: var(--ink); font: 0.9rem/1.5 var(--sans); }
+.degraded-warning strong { color: var(--down); }
 .field { display: inline-block; margin: 0 0.15rem 0.15rem 0; padding: 0 0.4rem; border: 1px solid var(--edge);
   border-radius: 4px; background: var(--wash); font: 0.8rem/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .run .group { display: inline-block; margin-right: 0.9rem; white-space: nowrap; }
@@ -242,6 +246,14 @@ def _run_details(final_state: dict, settings: dict | None) -> list[tuple[str, st
         details.append(("Version", escape(f"TradingAgents {s('version', '?')}")))
     if final_state.get("memory_note"):
         details.append(("Memory log", escape(final_state["memory_note"])))
+    degradations = final_state.get("structured_degradations") or []
+    if degradations:
+        agents = ", ".join(str(e.get("agent", "?")) for e in degradations)
+        details.append((
+            "Degraded",
+            f'<span class="degraded-note">DEGRADED \u2014 free-text fallback in: '
+            f"{escape(agents)}</span>",
+        ))
     return details
 
 
@@ -262,7 +274,12 @@ def render_report(ticker: str, final_state: dict, settings: dict | None, parts) 
     )
 
     contents, body = [], []
-    for n, (heading, _folder, written) in enumerate(parts, 1):
+    degraded = {
+        event.get("section"): event
+        for event in (final_state.get("structured_degradations") or [])
+        if event.get("section")
+    }
+    for n, (heading, folder, written) in enumerate(parts, 1):
         agents = "".join(
             f'<li><a href="#s{n}-{m}"><span class="bar"></span> <span class="label">{escape(agent)}</span></a></li>'
             for m, (agent, _f, _t) in enumerate(written, 1)
@@ -271,8 +288,19 @@ def render_report(ticker: str, final_state: dict, settings: dict | None, parts) 
         contents.append(f'<li><a href="#s{n}"><span class="num">{escape(numeral)}</span> '
                         f'<span class="label">{escape(name)}</span></a><ul>{agents}</ul></li>')
         body.append(f'<section id="s{n}"><h2>{escape(heading)}</h2>')
-        for m, (agent, _filename, text) in enumerate(written, 1):
-            body.append(f'<h3 id="s{n}-{m}">{escape(agent)}</h3>\n{_render_agent_text(md, text)}')
+        for m, (agent, filename, text) in enumerate(written, 1):
+            body.append(f'<h3 id="s{n}-{m}">{escape(agent)}</h3>')
+            event = degraded.get(f"{folder}/{filename}")
+            if event:
+                body.append(
+                    '<div class="degraded-warning" role="alert">'
+                    f"<strong>DEGRADED</strong> &mdash; this section was produced by "
+                    "free-text fallback after structured output failed every attempt "
+                    f"(reason: {escape(str(event.get('reason', '?')))}, "
+                    f"{escape(str(event.get('attempts', '?')))} attempts). "
+                    "Treat its conclusions with caution.</div>"
+                )
+            body.append(_render_agent_text(md, text))
         body.append("</section>")
 
     page_title = " ".join(x for x in (ticker, date, rating) if x)

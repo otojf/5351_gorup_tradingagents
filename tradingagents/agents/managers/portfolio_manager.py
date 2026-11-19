@@ -77,11 +77,15 @@ Write these sections, in this order, starting with the rating on its own line:
 
         # The typed rating is the decision; the rendered text only carries it.
         # Read back from text, a rating the thesis quotes could replace it.
-        decision = invoke_structured(structured_llm, prompt, "Portfolio Manager")
-        if decision is not None:
-            final_trade_decision = render_pm_decision(decision)
-            final_rating = decision.rating.value
+        degradations: list[dict] = []
+        outcome = invoke_structured(structured_llm, prompt, "Portfolio Manager")
+        if not outcome.degraded:
+            final_trade_decision = render_pm_decision(outcome.value)
+            final_rating = outcome.value.rating.value
         else:
+            degradations.append(
+                outcome.as_event("Portfolio Manager", "5_portfolio/decision.md")
+            )
             final_trade_decision = llm.invoke(prompt).content
             final_rating = parse_rating(final_trade_decision)
 
@@ -101,6 +105,7 @@ Write these sections, in this order, starting with the rating on its own line:
             "risk_debate_state": new_risk_debate_state,
             "final_trade_decision": final_trade_decision,
             "final_rating": final_rating,
+            "structured_degradations": degradations,
         }
 
     return portfolio_manager_node

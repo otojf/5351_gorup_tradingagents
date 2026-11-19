@@ -111,17 +111,23 @@ def create_sentiment_analyst(llm):
         # data is already in the prompt.
         formatted_messages = prompt.format_messages(messages=state["messages"])
 
+        degradations: list[dict] = []
+
         report_text = invoke_structured_or_freetext(
             structured_llm,
             llm,
             formatted_messages,
             render_sentiment_report,
             "Sentiment Analyst",
+            on_degraded=lambda outcome: degradations.append(
+                outcome.as_event("Sentiment Analyst", "1_analysts/sentiment.md")
+            ),
         )
 
         return {
             "messages": [AIMessage(content=report_text)],
             "sentiment_report": report_text,
+            "structured_degradations": degradations,
         }
 
     return sentiment_analyst_node

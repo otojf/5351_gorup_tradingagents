@@ -17,6 +17,22 @@ def analyst_names(keys) -> list[str]:
     return ["sentiment" if key == "social" else key for key in keys or []]
 
 
+_DEGRADED_WARNING = (
+    "DEGRADED — this section was produced by free-text fallback after structured "
+    "output failed every attempt (reason: {reason}, {attempts} attempts). "
+    "Treat its conclusions with caution."
+)
+
+
+def _degraded_sections(final_state: dict) -> dict[str, dict]:
+    """Map report section path -> the degradation event that produced it."""
+    return {
+        event.get("section"): event
+        for event in (final_state.get("structured_degradations") or [])
+        if event.get("section")
+    }
+
+
 def _header(ticker: str, final_state: dict, settings: dict | None) -> str:
     """The report's title and what produced it: analysis date, version, models, analysts, vendors."""
     lines = [f"# Trading Analysis Report: {ticker}", ""]
@@ -44,6 +60,29 @@ def _header(ticker: str, final_state: dict, settings: dict | None) -> str:
     if final_state.get("memory_note"):
         lines.append(f"- Memory log: {final_state['memory_note']}")
     return "\n".join(lines) + "\n\n"
+
+
+def _degraded_banner(final_state: dict) -> str:
+    """A warning above the report body when any section fell back to free text.
+
+    FR-D2 / INV-D1: a degraded run is never presented as a normal one. The
+    banner names each section so a reader knows which parts to trust less.
+    """
+    events = final_state.get("structured_degradations") or []
+    if not events:
+        return ""
+    detail = ", ".join(
+        f"{event.get('agent', '?')} ({event.get('retry_count', '?')} retries, "
+        f"{event.get('reason', '?')})"
+        for event in events
+    )
+    return (
+        "> **WARNING — DEGRADED REPORT.** "
+        f"{len(events)} agent section(s) fell back to free text after structured "
+        "output failed every retry. The sections named below are marked "
+        "DEGRADED and may be less reliable than a normal run.\n"
+        f"> Degraded sections: {detail}\n\n"
+    )
 
 
 # The report's sections in order: (heading, folder, [(agent, file, state path)]).
@@ -102,16 +141,29 @@ def write_report_tree(final_state: dict, ticker: str, save_path, settings: dict 
     save_path = Path(save_path)
     save_path.mkdir(parents=True, exist_ok=True)
     parts = _report_parts(final_state)
+    degraded = _degraded_sections(final_state)
     sections = []
     for heading, folder, written in parts:
         (save_path / folder).mkdir(exist_ok=True)
         for _agent, filename, text in written:
-            (save_path / folder / filename).write_text(text, encoding="utf-8")
+            warning = ""
+            event = degraded.get(f"{folder}/{filename}")
+            if event:
+                warning = (
+                    "> " + _DEGRADED_WARNING.format(
+                        reason=event.get("reason", "?"),
+                        attempts=event.get("attempts", "?"),
+                    ) + "\n\n"
+                )
+            (save_path / folder / filename).write_text(warning + text, encoding="utf-8")
         content = "\n\n".join(f"### {agent}\n{text}" for agent, _filename, text in written)
         sections.append(f"## {heading}\n\n{content}")
 
     (save_path / "complete_report.md").write_text(
-        _header(ticker, final_state, settings) + "\n\n".join(sections), encoding="utf-8"
+        _header(ticker, final_state, settings)
+        + _degraded_banner(final_state)
+        + "\n\n".join(sections),
+        encoding="utf-8",
     )
     if html:
         from tradingagents.report_html import render_report
