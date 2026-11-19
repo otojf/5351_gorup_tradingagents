@@ -1,0 +1,63 @@
+# NFR-E1 Verification Evidence
+# Captured locally on 2026-11-11 (branch feat/nfr-e1-eval, baseline 46bde74).
+# These include local captures plus the GitHub Actions runs for PR #6 and the
+# temporary bad PR #7. Gate 1 passes locally after the approval record was filled.
+
+## 1) Eval harness + CI gate tests
+$ python -m pytest tests/test_eval_harness.py tests/test_ci_gates.py -q
+.....................................                                    [100%]
+37 passed in 8.35s
+EXIT_CODE: 0
+
+## 2) Ruff (strict, changed areas)
+$ python -m ruff check eval scripts tests/test_eval_harness.py tests/test_ci_gates.py
+All checks passed!
+EXIT_CODE: 0
+
+## 3) Gate 2: static analysis
+$ python scripts/ci/check_static_analysis.py
+OK   ruff check: All checks passed!
+OK   pip check: No broken requirements found.
+OK   compileall: tradingagents=ok, cli=ok, eval=ok, scripts=ok
+PASS: gate 2 (static analysis; type-check/contract/security/permission NOT covered)
+EXIT_CODE: 0
+NOTE: type-check, contract, security, permission checks are NOT covered (stated).
+
+## 4) Gate 3: schema
+$ python scripts/ci/check_schema.py
+PASS: gate 3 (schema)
+EXIT_CODE: 0
+
+## 5) Gate 1: test-approval
+$ python scripts/ci/check_test_approval.py
+PASS: gate 1 (test-approval)
+EXIT_CODE: 0
+NOTE: approval record filled by HUANG SIYING (60572233) on 2026-11-11.
+
+## 6) Gate 6: AI-use log (coverage of code changes)
+$ python scripts/ci/check_ai_use_log.py --changed-file eval/runner.py --changed-file scripts/ci/check_schema.py --changed-file tests/test_ci_gates.py
+PASS: gate 6 (AI-use log)
+EXIT_CODE: 0
+
+## 7) Full regression (local)
+$ python -m pytest -q
+1444 passed, 6 skipped, 1 deselected, 100 subtests passed in 42.12s
+EXIT_CODE: 0
+
+## 8) GitHub Actions PR #6 — all required checks pass
+Run: https://github.com/otojf/5351_gorup_tradingagents/actions/runs/43048019537
+gate-1-test-approval: pass
+gate-2-static-analysis: pass
+gate-3-schema: pass
+gate-4-semantic-eval: pass
+gate-5-regression (py3.11 / py3.12, America/New_York / py3.13 / py3.14): pass
+gate-6-ai-use-log: pass
+clean-install smoke: pass (not one of the six required gates)
+
+## 9) Real bad PR #7 — gate 3 blocked
+PR: https://github.com/otojf/5351_gorup_tradingagents/pull/7
+Run: https://github.com/otojf/5351_gorup_tradingagents/actions/runs/43048868148
+gate-3-schema: fail (31s) — NFR-E1 fit_criterion intentionally removed
+gate-5-regression: fail (the broken registry also breaks registry-dependent tests)
+gate-1/2/4/6 and smoke: pass
+PR closed; branch bad/schema-gate-demo deleted; never merged.
