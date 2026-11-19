@@ -370,11 +370,39 @@ class TradingAgentsGraph:
             rating=run_rating(final_state),
         )
 
+    @staticmethod
+    def _new_skip_state():
+        from tradingagents.dataflows.vendor_skip import RunSkipState
+        return RunSkipState()
+
+    @staticmethod
+    def _attach_skip_state(args, state=None, reuse=True):
+        """Return a copy of ``args`` with a run-scoped RunSkipState in config.
+
+        Never mutates the caller's ``args``/``config`` dicts: the nested ``config``
+        and ``configurable`` are copied first, so reusing one config for several
+        runs cannot leak a previous run's state. With ``reuse=True`` an existing
+        state (already in ``configurable``) is kept — this is how debug's internal
+        stream_run reuses the propagate run's state. With ``reuse=False`` a fresh
+        state is always installed for the new run.
+        """
+        config = dict(args.get("config") or {})
+        configurable = dict(config.get("configurable") or {})
+        if not reuse or "fr_skip_state" not in configurable:
+            configurable["fr_skip_state"] = state if state is not None else \
+                TradingAgentsGraph._new_skip_state()
+        config["configurable"] = configurable
+        return {**args, "config": config}
+
     def _run_graph(self, company_name, trade_date, asset_type: str = "stock",
                    checkpoint_thread_id: str | None = None, portfolio=None):
         """Execute the graph and write the resulting state to disk and memory log."""
         init_agent_state = self.create_run_state(company_name, trade_date, asset_type, portfolio)
         args = self.propagator.get_graph_args()
+
+        # One run-scoped skip state for this analysis (a local object, never on
+        # self), threaded through configurable so tools share it across workers.
+        args = self._attach_skip_state(args, self._new_skip_state(), reuse=False)
 
         # Inject the checkpoint thread_id (from checkpoint_scope) so the same
         # ticker+date+graph-shape resumes; a different one starts fresh (#1089).
@@ -416,6 +444,12 @@ class TradingAgentsGraph:
         and reports come from their own finished steps ("tasks") as they happen.
         """
         args = {**args, "stream_mode": ["values", "tasks"]}
+        # A direct caller (the CLI) may not have supplied a run-scoped skip state;
+        # attach a fresh one into a COPY of the config so its tools share per-run
+        # bookkeeping without mutating the caller's config. When debug calls this
+        # with args from _run_graph, the state is already present and is reused
+        # (never reset here), so debug still logs a single skip.
+        args = self._attach_skip_state(args, reuse=True)
         # The graph's own config serves every tool call, as in propagate(), even
         # when the process-wide config has changed since. Each step runs in the
         # run's context, so the caller keeps its own between steps.
