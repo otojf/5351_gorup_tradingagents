@@ -1,0 +1,13 @@
+{
+  "_comment": "FR-B2 source table. Paths are relative to the repository root. S1 is the real verified snapshot for the 2026-11-11 AAPL run; S2 deliberately points at a missing file to exercise missing_evidence; S999 is used by the unknown_source sample and is intentionally absent here.",
+  "sources": {
+    "S1": {
+      "file": "docs/evidence/fr-b2/evidence/AAPL_2026-11-11/snapshot.txt",
+      "description": "Verified market data snapshot for AAPL @ 2026-11-11, obtained by calling the official build_verified_market_snapshot() before the analysis; text, line-addressable. This is the check evidence for the same run."
+    },
+    "S2": {
+      "file": "docs/evidence/fr-b2/evidence/AAPL_2026-11-11/snapshot_MISSING.txt",
+      "description": "Deliberately missing file: this path does not exist and must resolve to missing_evidence."
+    }
+  }
+}

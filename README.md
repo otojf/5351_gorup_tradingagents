@@ -50,3 +50,9 @@ matrix-expanded gate‑5 checks) and one approving review. It is configured on
 See `docs/architecture/repository-structure-mapping.md` for how the course's
 `src/` and `test/offline|live/` map to this repo's `tradingagents/`, `cli/`, and
 `tests/`.
+
+## 功能开发分支
+
+| 需求 | 分支 | 入口 |
+|---|---|---|
+| FR-B2 报告结论引用检查 | `feat/fr-b2-conclusion` | [`fr_b2/README.md`](fr_b2/README.md) |
