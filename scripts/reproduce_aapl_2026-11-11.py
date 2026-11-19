@@ -19,12 +19,11 @@ sys.path.insert(0, str(WS))
 os.chdir(WS)
 
 import tradingagents  # noqa: E402  (loads .env from cwd)
-
-from tradingagents.graph.trading_graph import TradingAgentsGraph  # noqa: E402
-from tradingagents.default_config import build_default_config  # noqa: E402
 from tradingagents.dataflows.vendors.yahoo.snapshot import (  # noqa: E402
     build_verified_market_snapshot,
 )
+from tradingagents.default_config import build_default_config  # noqa: E402
+from tradingagents.graph.trading_graph import TradingAgentsGraph  # noqa: E402
 
 TICKER = "AAPL"
 TRADE_DATE = "2026-11-11"
