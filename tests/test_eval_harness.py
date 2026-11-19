@@ -48,7 +48,12 @@ def test_run_one_golden_case_returns_rating_and_manifest(tmp_path):
     ctx = EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource())
     result = run_case(case, ctx, _config(tmp_path))
 
-    assert result.rating == case.expected_rating
+    # With the FR-A1 risk gate integrated and no risk_portfolio supplied, the
+    # effective rating is REVIEW (fail-closed). The scripted LLM source here is
+    # non-structured, so no typed PortfolioDecision reaches the gate and the
+    # model rating is not recorded; either way the harness run + manifest must
+    # succeed. This verifies the harness, not a specific gate outcome (E1).
+    assert result.rating in {case.expected_rating, "REVIEW"}
     m = result.manifest
     for key in ("case_id", "ticker", "trade_date", "rating", "model", "config_hash",
                 "data_snapshot", "prompt_snapshot", "tool_calls_total", "output_paths"):
@@ -199,7 +204,12 @@ def test_suite_runs_three_times_with_stable_rating_reports_and_tokens(tmp_path):
     )
 
     assert len(results) == 3
-    assert {r.rating for r in results} == {GOLDEN_SET[0].expected_rating}
+    # Determinism: all repeated runs must produce the SAME rating. With the FR-A1
+    # gate integrated and no risk_portfolio supplied that common value is REVIEW
+    # (fail-closed); accept either the model's expected rating or REVIEW (E1).
+    ratings = {r.rating for r in results}
+    assert len(ratings) == 1, ratings
+    assert ratings <= {GOLDEN_SET[0].expected_rating, "REVIEW"}
     for key in ("market_report", "sentiment_report", "news_report", "fundamentals_report"):
         assert len({r.final_state[key] for r in results}) == 1, key
     assert len({json.dumps(r.manifest["tokens"], sort_keys=True) for r in results}) == 1
@@ -407,7 +417,9 @@ def test_run_suite_single_case_accepts_instance_or_factory(tmp_path):
 
     for results in (by_instance, by_factory):
         assert len(results) == 1
-        assert results[0].rating == case.expected_rating
+        # FR-A1 gate integrated without risk_portfolio -> effective REVIEW; accept
+        # either the model's expected rating or REVIEW (agreed E1 resolution).
+        assert results[0].rating in {case.expected_rating, "REVIEW"}
         assert results[0].final_state["company_of_interest"] == case.ticker
 
 
