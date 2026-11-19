@@ -10,14 +10,16 @@ free-text generation and the rating is read from that text.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from tradingagents.agents.context import (
     get_instrument_context_from_state,
     get_language_instruction,
     get_portfolio_context_from_state,
 )
-from tradingagents.agents.rating import parse_rating
 from tradingagents.agents.schemas import PortfolioDecision, render_pm_decision
 from tradingagents.agents.structured import NO_EXTERNAL_TOOLS, bind_structured, invoke_structured
+from tradingagents.dataflows.symbols import safe_ticker_component
 
 
 def create_portfolio_manager(llm):
@@ -75,19 +77,22 @@ Write these sections, in this order, starting with the rating on its own line:
 
 {NO_EXTERNAL_TOOLS}{get_language_instruction()}"""
 
-        # The typed rating is the decision; the rendered text only carries it.
-        # Read back from text, a rating the thesis quotes could replace it.
+        # One structured call produces both results the rest of the pipeline needs:
+        # - ``decision`` (typed PortfolioDecision, or None) is the FR-A1 gate input.
+        # - a degraded call is recorded as a DEGRADED event (FR-D2 / INV-D1) and
+        #   falls back to free text, so it is never silent.
+        # The typed rating is the decision; the rendered text only carries it. The
+        # effective rating is set by the FR-A1 gate below, not here.
         degradations: list[dict] = []
         outcome = invoke_structured(structured_llm, prompt, "Portfolio Manager")
+        decision = outcome.value
         if not outcome.degraded:
-            final_trade_decision = render_pm_decision(outcome.value)
-            final_rating = outcome.value.rating.value
+            final_trade_decision = render_pm_decision(decision)
         else:
             degradations.append(
                 outcome.as_event("Portfolio Manager", "5_portfolio/decision.md")
             )
             final_trade_decision = llm.invoke(prompt).content
-            final_rating = parse_rating(final_trade_decision)
 
         new_risk_debate_state = {
             "history": risk_debate_state["history"],
@@ -101,10 +106,53 @@ Write these sections, in this order, starting with the rating on its own line:
             "count": risk_debate_state["count"],
         }
 
+        # FR-A1: the single authoritative risk evaluation runs at this output
+        # boundary, before any effective actionable rating is published. The model
+        # rating is preserved in model_rating; final_rating becomes the effective
+        # public signal (REVIEW unless APPROVED).
+        from tradingagents.dataflows.config import get_config
+        from tradingagents.risk_gate.adapter import AuditPersistenceError, apply_gate
+
+        cfg = get_config()
+        ticker = state.get("company_of_interest", "")
+        trade_date = state.get("trade_date", "")
+        audit_dir = None
+        try:
+            results_dir = cfg.get("results_dir")
+            if results_dir and ticker:
+                audit_dir = (Path(results_dir) / safe_ticker_component(ticker) / "risk_audit")
+        except Exception:  # noqa: BLE001 - audit_dir is best-effort location only
+            audit_dir = None
+
+        try:
+            gate = apply_gate(
+                ticker,
+                trade_date,
+                state.get("trader_proposal"),
+                decision,
+                cfg.get("risk_portfolio"),
+                audit_dir=audit_dir,
+            )
+        except AuditPersistenceError:
+            # Fail closed without crashing the run: no actionable recommendation may
+            # be published when its durable audit cannot be written.
+            gate = {
+                "model_rating": getattr(getattr(decision, "rating", None), "value", None),
+                "final_rating": "REVIEW",
+                "risk_verdict": "NEEDS_REVIEW",
+                "decision_status": "PENDING_REVIEW",
+                "risk_evaluation": None,
+            }
+
         return {
             "risk_debate_state": new_risk_debate_state,
             "final_trade_decision": final_trade_decision,
-            "final_rating": final_rating,
+            "portfolio_decision": decision,
+            "model_rating": gate["model_rating"],
+            "final_rating": gate["final_rating"],
+            "risk_verdict": gate["risk_verdict"],
+            "decision_status": gate["decision_status"],
+            "risk_evaluation": gate["risk_evaluation"],
             "structured_degradations": degradations,
         }
 

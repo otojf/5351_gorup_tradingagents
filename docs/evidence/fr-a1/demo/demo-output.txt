@@ -1,0 +1,110 @@
+
+==============================================================================
+SECTION 1 — ADAPTER-LEVEL DEMONSTRATIONS (real engine + adapter)
+==============================================================================
+
+[A. Valid BUY with complete risk inputs]
+  original model rating : Buy
+  core rule verdict     : APPROVED / ACTIONABLE
+  effective risk_verdict: APPROVED
+  final public rating   : Buy
+  decision status       : ACTIONABLE
+  rules                 : all PASS
+  triggered violations  : []
+  audit persisted       : True
+  audit policy_version  : fr-a1-v1  hash=c73b9f3d5ff0...
+  check A: PASS — core APPROVED and decision ACTIONABLE
+
+[B. BUY without stop-loss]
+  original model rating : Buy
+  core rule verdict     : REJECTED / BLOCKED
+  effective risk_verdict: REJECTED
+  final public rating   : REVIEW
+  decision status       : BLOCKED
+  rules                 : VIOLATED=R1_STOP_LOSS_REQUIRED; UNKNOWN=R4_REWARD_RISK
+  triggered violations  : ['R1_STOP_LOSS_REQUIRED']
+  audit persisted       : True
+  audit policy_version  : fr-a1-v1  hash=c73b9f3d5ff0...
+  check B: PASS — REJECTED with R1 violation
+
+[C. BUY without portfolio snapshot]
+  original model rating : Buy
+  core rule verdict     : NEEDS_REVIEW / PENDING_REVIEW
+  effective risk_verdict: NEEDS_REVIEW
+  final public rating   : REVIEW
+  decision status       : PENDING_REVIEW
+  rules                 : UNKNOWN=R2_SINGLE_NAME_CAP,R3_SECTOR_CONCENTRATION
+  triggered violations  : []
+  audit persisted       : True
+  audit policy_version  : fr-a1-v1  hash=c73b9f3d5ff0...
+  check C: PASS — NEEDS_REVIEW / PENDING_REVIEW
+
+[D. Single-name concentration over 10% (12%)]
+  original model rating : Buy
+  core rule verdict     : REJECTED / BLOCKED
+  effective risk_verdict: REJECTED
+  final public rating   : REVIEW
+  decision status       : BLOCKED
+  rules                 : VIOLATED=R2_SINGLE_NAME_CAP
+  triggered violations  : ['R2_SINGLE_NAME_CAP']
+  audit persisted       : True
+  audit policy_version  : fr-a1-v1  hash=c73b9f3d5ff0...
+  check D: PASS — REJECTED with R2 violation
+
+[E. Conflicting sector classification (Energy vs real Technology)]
+  original model rating : Buy
+  core rule verdict     : NEEDS_REVIEW / PENDING_REVIEW
+  effective risk_verdict: NEEDS_REVIEW
+  final public rating   : REVIEW
+  decision status       : PENDING_REVIEW
+  rules                 : UNKNOWN=R3_SECTOR_CONCENTRATION
+  triggered violations  : []
+  audit persisted       : True
+  audit policy_version  : fr-a1-v1  hash=c73b9f3d5ff0...
+  check E: PASS — not approved (non-actionable)
+
+[F. Audit persistence failure]
+  original model rating : Buy
+  core rule verdict     : (not published)
+  effective risk_verdict: (raised)
+  final public rating   : (raised)
+  decision status       : (raised)
+  rules                 : fail-closed exception
+  audit persisted       : False
+  writer invoked        : 1 time(s)
+  outcome               : RAISED OSError: audit store unavailable
+  check F: PASS — writer invoked, raised, no audit written
+
+[G. No audit destination (would-be APPROVED downgraded)]
+  original model rating : Buy
+  core rule verdict     : APPROVED / ACTIONABLE
+  effective risk_verdict: NEEDS_REVIEW
+  final public rating   : REVIEW
+  decision status       : PENDING_REVIEW
+  rules                 : all PASS
+  triggered violations  : []
+  audit persisted       : False
+  audit policy_version  : fr-a1-v1  hash=c73b9f3d5ff0...
+  check G: PASS — core APPROVED but publication non-actionable, no audit
+
+==============================================================================
+SECTION 2 — FULL-GRAPH INTEGRATION (real graph, offline scripted model)
+==============================================================================
+
+[Full graph: valid BUY + complete risk_portfolio]
+  propagate signal (effective) : Buy
+  state['model_rating']        : Buy
+  state['risk_verdict']        : APPROVED
+  state['decision_status']     : ACTIONABLE
+  both structured objects kept : trader_proposal=True, portfolio_decision=True
+  check FG: PASS — signal Buy, system APPROVED/ACTIONABLE, both structured objects kept
+
+------------------------------------------------------------------------------
+Legend: 'core rule verdict' = risk_evaluation.verdict (policy outcome).
+        'effective risk_verdict' = publication authorization.
+        APPROVED core rules do not authorize publication without a
+        durable audit; missing audit dir downgrades to NEEDS_REVIEW.
+------------------------------------------------------------------------------
+
+SUMMARY: 8/8 expectancy checks passed (adapter=PASS, full_graph=PASS).
+RESULT: all demonstrations passed.

@@ -13,7 +13,7 @@ from tradingagents.agents.schemas import TraderProposal, render_trader_proposal
 from tradingagents.agents.structured import (
     NO_EXTERNAL_TOOLS,
     bind_structured,
-    invoke_structured_or_freetext,
+    invoke_structured,
 )
 
 
@@ -82,23 +82,27 @@ def create_trader(llm):
             },
         ]
 
-        degradations: list[dict] = []
-
-        trader_plan = invoke_structured_or_freetext(
-            structured_llm,
-            llm,
-            messages,
-            render_trader_proposal,
-            "Trader",
-            on_degraded=lambda outcome: degradations.append(
+        # Run the structured call once and keep both results:
+        # - ``proposal`` (the typed object, or None) is what the FR-A1 risk gate
+        #   evaluates; a free-text fallback leaves it None so the gate fails closed.
+        # - a degraded structured call is recorded as a DEGRADED event (FR-D2 /
+        #   INV-D1) and falls back to free text, so it is never silent.
+        outcome = invoke_structured(structured_llm, messages, "Trader")
+        proposal = outcome.value
+        if outcome.degraded:
+            degradations: list[dict] = [
                 outcome.as_event("Trader", "3_trading/trader.md")
-            ),
-        )
+            ]
+            trader_plan = llm.invoke(messages).content
+        else:
+            degradations = []
+            trader_plan = render_trader_proposal(proposal)
 
         return {
             "messages": [AIMessage(content=trader_plan)],
             "trader_investment_plan": trader_plan,
             "structured_degradations": degradations,
+            "trader_proposal": proposal,
         }
 
     return trader_node
