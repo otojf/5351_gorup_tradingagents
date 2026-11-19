@@ -1,0 +1,57 @@
+schema_version: "1.0"
+project: "CS5351 Group Project - TradingAgents"
+description: >-
+  AI-use log (D1). Every code or prompt change must be traceable to an AI coding
+  agent session. A PR that changes code or prompts without a matching entry here
+  is blocked by the AI-use-log gate (FR-E3 gate 6).
+
+entries:
+  - commit_range: "46bde74..feat/fr-d2-degraded"
+    date: "2026-11-18"
+    owner: D
+    agent: "opencode (cityu/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      Local session on branch feat/fr-d2-degraded (transcript export pending;
+      session reconstructed after a host crash and a discarded earlier
+      worktree, restarted from main per the owner's instruction).
+    summary: >-
+      FR-D2 / INV-D1 visible structured-output degradation. A structured call
+      that yields no parsed result or fails validation is now attempted once
+      and retried twice (MAX_ATTEMPTS=3). Each failed attempt before the last
+      is the RETRY middle state and is only logged; if every attempt fails the
+      agent falls back to free text and records a DEGRADED event in
+      AgentState.structured_degradations. All four structured agents
+      (Portfolio Manager, Research Manager, Trader, Sentiment Analyst) emit
+      the event with their report section path. The report header carries a
+      DEGRADED banner and each degraded section file / HTML section shows a
+      visible warning so a reader does not trust a fallback run as a normal
+      one. Requirements FR-D2 now specify a two-retry budget (three attempts)
+      in both requirement registries. Tests were written first in
+      tests/test_structured_degradation.py (23 tests, including
+      test_invariant_no_silent_degradation). FR-D3 (tool-call counting) and
+      FR-D4 (exit-status propagation) are explicitly out of scope.
+    files_changed:
+      - tradingagents/agents/structured.py
+      - tradingagents/agents/state.py
+      - tradingagents/graph/propagation.py
+      - tradingagents/agents/managers/portfolio_manager.py
+      - tradingagents/agents/managers/research_manager.py
+      - tradingagents/agents/trader/trader.py
+      - tradingagents/agents/analysts/sentiment_analyst.py
+      - tradingagents/reporting.py
+      - tradingagents/report_html.py
+      - tests/test_structured_degradation.py
+      - docs/req/requirements.yaml
+      - docs/req/requirements-options.yaml
+      - docs/ai-use-log.yaml
+    human_approved_by: "PENDING (owner D to confirm before merge)"
+    human_review_ref: >-
+      Owner approved the plan in-session before implementation (retry-twice
+      semantics, section-level warnings, markdown + HTML coverage) and
+      explicitly authorised local-only work with no push to GitHub.
+    status: draft
+
+notes: >-
+  This log currently carries only the FR-D2 entry for branch
+  feat/fr-d2-degraded. Entries from other owners are appended as their branches
+  merge; they are intentionally not carried over from unmerged work.
