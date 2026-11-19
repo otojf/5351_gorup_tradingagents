@@ -68,6 +68,14 @@ class AgentState(MessagesState):
     ]
     final_trade_decision: Annotated[str, "Final decision from the Portfolio Manager"]
     final_rating: Annotated[str, "The Portfolio Manager's 5-tier rating, or REVIEW when it has none"]
+    # FR-A1 risk gate: structured proposals, the model's own rating (evidence),
+    # and the gate's independent verdict kept distinct from the effective signal.
+    trader_proposal: Annotated[object, "Structured TraderProposal, or None when the model returned text"]
+    portfolio_decision: Annotated[object, "Structured PortfolioDecision, or None on free-text fallback"]
+    model_rating: Annotated[str, "The model's own final rating, preserved as evidence for the risk gate"]
+    risk_verdict: Annotated[str, "APPROVED / REJECTED / NEEDS_REVIEW from the FR-A1 risk gate"]
+    decision_status: Annotated[str, "ACTIONABLE / BLOCKED / PENDING_REVIEW / NO_TRADE"]
+    risk_evaluation: Annotated[object, "The RiskEvaluation audit record for this decision"]
     past_context: Annotated[str, "Memory log context for the Portfolio Manager (same-ticker decisions + cross-ticker lessons), written by the Memory Log step"]
     memory_note: Annotated[str, "What the Memory Log step could not settle or read this run, for the report; empty when all went well"]
     portfolio_context: Annotated[str, "Caller-supplied holdings and cash, rendered at run start; empty when not provided"]
