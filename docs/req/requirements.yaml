@@ -39,7 +39,7 @@ requirements:
       - NFR-A1
       - NFR-A2
     verification:
-      test: "test_risk_gate_violations"
+      test: "test_invariant_sweep_never_approves_violations"
       monitor: "risk_verdict_count"
       demo: "注入坏单，展示被拒绝、规则 ID 与审计记录"
     status: draft
@@ -71,10 +71,13 @@ requirements:
       - NFR-B1
       - NFR-B2
     verification:
-      test: "test_evidence_coverage"
+      test: "test_completed_citation_check_returns_zero_with_untraceable_results"
       monitor: "traceability_coverage"
-      demo: "点击一条结论跳到报告原文；无出处结论标 UNTRACEABLE"
-    status: draft
+      demo: >-
+        点击一条结论跳到报告原文；无出处结论标 UNTRACEABLE。
+        [partial] 仅 FR-B2 引用检查已实现；FR-B1 的结构化 EvidenceRef 字段、
+        100% 关键字段覆盖率与 <=1KB 存储上限尚未实现。
+    status: partial
 
   # ---------------------------------------------------------------------------
   # C. 成本可控（Owner C）
@@ -103,10 +106,13 @@ requirements:
       - FR-C3
       - NFR-C2
     verification:
-      test: "test_budget_cutoff"
+      test: "test_missing_key_one_log_no_http_sentinel_per_call"
       monitor: "run_tokens"
-      demo: "同一案例成本从 19.5 万降到 12 万以下；FRED 重试 7 次降到 0"
-    status: draft
+      demo: >-
+        同一案例成本从 19.5 万降到 12 万以下；FRED 重试 7 次降到 0。
+        [partial] 仅"缺凭据数据源跳过、0 次重试"(FR-C2)已实现并有测试；
+        token 预算/硬上限熔断/分 agent 用量账本等 token 阈值尚未实现。
+    status: partial
 
   # ---------------------------------------------------------------------------
   # D. 失败可见（Owner D）
@@ -152,12 +158,13 @@ requirements:
       固定案例评测必须可复现：同一 commit/config/data 下评级稳定、指标波动 <= 5%；
       离线评测必须 <= 10 分钟；CI 必须配置六道 blocking gates。
     fit_criterion: >-
-      3 次重复运行评级 3/3 一致，token/延迟波动 <= 5%；
+      3 次重复运行评级 3/3 一致，token 波动 <= 5%；延迟只记录不断言 5% 带宽
+      （脚本化模型墙钟噪声过大，硬断言会 flaky）；
       固定 golden set 3–5 个案例 100% 执行并导出 before/after 对比表；
-      每次运行 manifest 完整（commit、model、prompt hash、config、data snapshot、
-      tokens、latency、degradations、risk verdicts、traceability）；
-      离线套件 p95 <= 10 分钟且 0 次网络调用；6/6 blocking gates 配置，
-      每个 gate 用故意坏 PR 验证能拦。
+      每次运行 manifest 完整（commit、model、prompt hash、prompt source id、config、
+      data snapshot、tokens、latency、degradations、risk verdicts、traceability）；
+      离线套件 <= 10 分钟且 0 次网络调用；6/6 blocking gates 配置，
+      每个 gate 用本地负向单测验证能拦，真实坏 PR 拦截证据目前仅 gate-3。
     priority: must
     owner: E
     component: "eval_harness"
@@ -185,9 +192,11 @@ requirements:
           每次评测运行必须记录 manifest：commit、model、prompt hash、config、
           data snapshot、tokens、latency、degradations、risk verdicts 和 traceability。
         fit_criterion: >-
-          100% manifest 必填字段存在（commit、model、config_hash、prompt_snapshot、
-          data_snapshot、tokens、latency_s、tool_calls）；缺失字段显式记 null 并在
-          unavailable_sources 给出原因，不得伪造；同 manifest 数据重跑评级稳定。
+          100% manifest 必填字段存在（commit、model、config_hash、prompt_hash、
+          prompt_source_id、data_snapshot、tokens、latency_s、tool_calls）；
+          prompt_hash 是对 prompt 模板源码计算的真实 sha256，prompt_source_id 只是
+          数据源标签（非 hash）；缺失字段显式记 null 并在 unavailable_sources 给出
+          原因，不得伪造；同 manifest 数据重跑评级稳定。
         verification:
           test: "test_run_one_golden_case_returns_rating_and_manifest"
           monitor: "manifest_completeness"
@@ -204,7 +213,7 @@ requirements:
           好 PR 全过；未覆盖的子项（type-check、contract、security、permission）
           在 README 与 CI 注释中显式列出，不假装覆盖。
         verification:
-          test: "test_ci_six_gates"
+          test: "test_gate_scripts_importable_and_have_main"
           monitor: "ci_gate_status"
           demo: "故意坏 PR 被对应 gate 拦下"
         status: partial
@@ -217,12 +226,12 @@ requirements:
           分支保护要求 6 项检查；secret 扫描 0 发现；坏 PR 0 合并；
           回归套件 invariant violation = 0。
         verification:
-          test: "test_invariant_no_merge_with_failing_gate"
+          test: "test_gate3_bad_input_missing_field"
           monitor: "gate_failures"
           demo: "分支保护配置与坏 PR 拦截"
         status: partial
     verification:
-      test: "test_golden_set"
+      test: "test_suite_runs_three_times_with_stable_rating_reports_and_tokens"
       monitor: "eval_pass_rate"
       demo: "同案例 before/after 对比表；故意坏 PR 被 gate 拦下"
     status: draft

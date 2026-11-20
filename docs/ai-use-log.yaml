@@ -7,6 +7,36 @@ description: >-
 
 entries:
   - commit_range: "46bde74..feat/nfr-e1-eval"
+    date: "2026-11-20"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      transcripts/60572233-HUANG-SIYING.md — Appendix C
+      "2026-11-20 PR #6 review response" (transcript appended; rationale cells
+      drafted from the student's own instructions; student may edit before submission)
+    session_id: "ses_e081bae8cffeus7tLwpTQf6a4H"
+    summary: >-
+      PR #6 review response (k11): replaced the two nonexistent test references
+      in the trace matrix / registry with real tests; made prompt_snapshot a real
+      sha256 (prompt_hash) plus a separate prompt_source_id label; added NFR-E1
+      metric tests (token <=5%, 0 network via patched socket/urlopen, offline
+      <=10 min); added the A/B/D manifest injection interface (eval/manifest_rules.py)
+      with a fake-data test; corrected the verification/demo docs and delivered
+      a working demo (run_demo.py + captured output).
+    files_changed:
+      - eval/
+      - tests/test_eval_harness.py
+      - docs/architecture/trace-matrix.md
+      - docs/architecture/invariants.md
+      - docs/req/requirements.yaml
+      - docs/req/requirements-options.yaml
+      - docs/evidence/e1/
+      - docs/ai-use-log.yaml
+    human_approved_by: "HUANG SIYING (60572233); rationale drafts reviewed 2026-11-20"
+    human_review_ref: "Student reviewed rationale drafts on 2026-11-20; PR #6 re-review by k1160967796 pending"
+    status: draft
+
+  - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
@@ -167,6 +197,164 @@ entries:
       - "tests/test_fr_c2_probe.py"
     human_review_ref: "transcripts/60662195-RenLongteng.md#用户干预索引"
     status: "locally_committed_pending_team_review"
+
+  - commit_range: "46bde74..integration/team-features"
+    date: "2026-11-11"
+    owner: A
+    agent: "not recorded"
+    session_ref: >-
+      not recorded — no annotated D5 transcript exists for the FR-A1 session.
+      The FR-A1 evidence explicitly required that no synthetic transcript be
+      fabricated (docs/evidence/fr-a1/human-review-milestones.md, section 7).
+    session_id: null
+    summary: >-
+      FR-A1 deterministic, offline, auditable risk gate: a versioned-policy
+      evaluator returning APPROVED/REJECTED/NEEDS_REVIEW (R1-R6), the
+      Portfolio Manager boundary adapter, graph/state wiring, and the FR-A1
+      test suites (core, safety-edge, adapter, audit) plus the end-to-end
+      graph test updates.
+    files_changed:
+      - tradingagents/risk_gate/
+      - tests/risk_gate/
+      - tests/test_graph_end_to_end.py
+    human_approved_by: "pending (owner A to confirm; approvals referenced in docs/evidence/fr-a1/human-review-milestones.md)"
+    human_review_ref: >-
+      docs/evidence/fr-a1/contribution-summary.md and
+      human-review-milestones.md (gate-by-gate approvals; session id not
+      recorded)
+    status: draft
+
+  - commit_range: "46bde74..integration/team-features"
+    date: "2026-11-12"
+    owner: B
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: "transcripts/60245953-WANG Yixuan.md"
+    session_id: "ses_e30b2ced0ffeicCgqbTlJgUKg6"
+    summary: >-
+      FR-B2 report conclusion citation checker (fr_b2/check_citations.py, offline
+      stdlib) with its sources table, sample claims, and 12 offline tests, plus
+      the AAPL 2026-11-11 reproduction script and captured evidence.
+    files_changed:
+      - scripts/reproduce_aapl_2026-11-11.py
+      - fr_b2/
+    human_approved_by: "WANG Yixuan (60245953)"
+    human_review_ref: "transcripts/60245953-WANG Yixuan.md (Intervention index)"
+    status: draft
+
+  - commit_range: "46bde74..integration/team-features"
+    date: "2026-11-11"
+    owner: E
+    agent: "not recorded"
+    session_ref: >-
+      not recorded — the governance artifacts were authored on the
+      compliance/structure branch and integrated by commit fa795f1; no
+      annotated D5 transcript for that authoring session is present in
+      transcripts/.
+    session_id: null
+    summary: >-
+      Repository governance/structure artifacts required by D3/D4: the coding
+      agent entry point and static prompt (AGENTS.md, Prompt.md), the
+      project covenant and always-on rules (.agent/rules.md, .opencode/rules.md,
+      .opencode/permissions.jsonc), and the code-governance docs
+      (structural-constraints, verification-constraints, mcp-tool-manifest).
+    files_changed:
+      - AGENTS.md
+      - Prompt.md
+      - .agent/
+      - .opencode/
+      - docs/code-governance/
+    human_approved_by: "pending (authoring owner to confirm; integrated via commit fa795f1)"
+    human_review_ref: >-
+      integration commit fa795f1 (compliance/structure); authoring session id
+      not recorded
+    status: draft
+
+  - commit_range: "17be598..integration/d8-structure"
+    date: "2026-11-20"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e081bae8cffeus7tLwpTQf6a4H (see
+      transcripts/60572233-HUANG-SIYING.md — Appendix D "integration and D8
+      structure repair")
+    session_id: "ses_e081bae8cffeus7tLwpTQf6a4H"
+    summary: >-
+      D8 physical structure migration (integration layer): moved application
+      packages into src/ (tradingagents, cli, eval, fr_b2); split tests into
+      test/offline/ and test/live/ (the only API-dependent test,
+      test_deepseek_reasoning_live, isolated in test/live/); updated
+      pyproject packaging (packages.find where=src; testpaths), gate scripts
+      (compileall dirs, semantic-eval path, AI-use-log code prefixes), README
+      run commands and the structure-mapping doc. Cross-test imports updated
+      from tests.* to test.offline.*. No feature business logic changed.
+    files_changed:
+      - src/
+      - test/
+      - pyproject.toml
+      - scripts/ci/
+      - README.md
+      - docs/architecture/repository-structure-mapping.md
+      - docs/ai-use-log.yaml
+    human_approved_by: "pending (owner to confirm before merge)"
+    human_review_ref: >-
+      Local migration only; not pushed. Rationale to be confirmed by owner.
+    status: draft
+
+  - commit_range: "4ae4fef..integration/a1-fix"
+    date: "2026-11-20"
+    owner: A
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e081bae8cffeus7tLwpTQf6a4H (see
+      transcripts/60572233-HUANG-SIYING.md — Appendix D "integration and D8
+      structure repair"; A1 fix ported into the integration workstream)
+    session_id: "ses_e081bae8cffeus7tLwpTQf6a4H"
+    summary: >-
+      FR-A1 fix ported from the local integration worktree onto the D8 tree:
+      approved HOLD no longer downgraded to REVIEW; Trader position_sizing is
+      parsed and can only tighten/reject (unparseable -> R6 UNKNOWN); production
+      path can inject risk_portfolio via config/CLI (--risk-portfolio) instead of
+      always REVIEW; malformed risk_portfolio fails closed to
+      NEEDS_REVIEW/PENDING_REVIEW instead of crashing (and the audit directory
+      write raises AuditPersistenceError instead of silently skipping). Includes
+      portfolio_file loader, examples/risk_portfolio.example.json, and new/updated
+      risk-gate + CLI tests.
+    files_changed:
+      - src/tradingagents/risk_gate/
+      - src/tradingagents/default_config.py
+      - src/cli/
+      - test/offline/risk_gate/
+      - test/offline/test_cli_commands.py
+      - test/offline/test_portfolio_context.py
+      - examples/
+      - docs/ai-use-log.yaml
+    human_approved_by: "pending (owner A to confirm before merge)"
+    human_review_ref: >-
+      Ported from the owner's local integration/local-fixes worktree; owner A to
+      review the current-tree adaptation before merge.
+    status: draft
+
+  - commit_range: "39624b8..integration/d8-structure"
+    date: "2026-11-20"
+    owner: E
+    agent: "not recorded"
+    session_ref: >-
+      restored from 7f9c3ec (compliance/structure); authoring session not recorded
+    session_id: null
+    summary: >-
+      Restore the versioned runtime prompt records (Section 5 / D9 structure)
+      prompts/prompt_v1.0.yaml and prompts/prompt_v1.1.yaml from commit 7f9c3ec
+      of the compliance/structure history. Paths inside v1.0 adapted to the D8
+      src/ layout (tradingagents/... -> src/tradingagents/...); v1.1 needed no
+      path change. Version content and candidate status are unchanged.
+    files_changed:
+      - prompts/
+      - docs/ai-use-log.yaml
+    human_approved_by: "pending (owner to confirm before merge)"
+    human_review_ref: >-
+      Restored verbatim from 7f9c3ec; authoring session not recorded. Owner to
+      confirm the D8 path adaptation.
+    status: draft
 
 
 notes: >-

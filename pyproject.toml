@@ -51,14 +51,15 @@ tradingagents = "cli.main:app"
 version = {attr = "tradingagents.__version__"}
 
 [tool.setuptools.packages.find]
-include = ["tradingagents*", "cli*"]
+where = ["src"]
+include = ["tradingagents*", "cli*", "eval*", "fr_b2*"]
 
 [tool.setuptools.package-data]
 cli = ["static/*"]
 tradingagents = ["assets/*.svg"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["test/offline", "test/live"]
 addopts = "-ra --strict-markers -m \"not integration\""
 markers = [
     "unit: fast isolated unit tests",

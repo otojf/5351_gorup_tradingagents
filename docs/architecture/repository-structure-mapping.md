@@ -1,39 +1,38 @@
 # Required Repository Structure — Mapping
 
 The course specification (D8, §5 "Required Repository Structure") names
-directories (`src/`, `test/offline/`, `test/live/`) that differ from this
-repository's existing layout. The team decided **not** to physically migrate;
-this document is the required structural mapping so reviewers can trace every
-specified path to its real location.
+`src/` (full source) and `test/offline/` + `test/live/`. This repository now uses
+that layout **physically** (branch `integration/d8-structure`), so the table
+below documents the real locations (no longer a mapping away from spec paths).
 
 | Spec path (§5/D8) | Actual path in this repo | Notes |
 |---|---|---|
-| `src/` (full source) | `tradingagents/` + `cli/` | All application source. `tradingagents/` holds the framework; `cli/` holds the CLI. Module names match architectural elements (analysts/managers/researchers/risk_mgmt/dataflows/graph). |
-| `test/offline/` (deterministic tests) | `tests/` | The existing suite is offline/deterministic by default (`addopts = -m "not integration"`, tests monkeypatch vendors and LLMs). Includes `tests/test_eval_harness.py`. |
-| `test/live/` (API-dependent tests) | tests marked `integration` within `tests/` | No physical split. Live tests are the subset requiring API access, selected via the `integration` marker (excluded by default). A physical `tests/live/` split is deferred; the marker is the functional equivalent. |
-| `README.md` | `README.md` | (To be expanded for D7 gates + §4 content in later work.) |
-| `AGENTS.md` | *(pending)* | D3 governance file, not yet created. |
-| `architecture-blueprint.md` | *(pending)* | D2.1 master constraint document. |
-| `Prompt.md` | *(pending)* | D9 static startup prompt. |
-| `Report.md` | *(pending)* | D6 process report. |
+| `src/` (full source) | `src/tradingagents/`, `src/cli/`, `src/eval/`, `src/fr_b2/` | Application source under a `src/` layout; packages keep their import names. Set in `pyproject.toml` (`packages.find where=["src"]`). Module names match architectural elements (analysts/managers/researchers/risk_mgmt/dataflows/graph). |
+| `test/offline/` (deterministic tests) | `test/offline/` | Deterministic, offline tests; default `-m "not integration"`. Includes `test/offline/test_eval_harness.py`, `test/offline/risk_gate/`, `test/offline/fr_b2/`. |
+| `test/live/` (API-dependent tests) | `test/live/` | Requires external API access; `@pytest.mark.integration`, run only with `-m integration`. Holds `test/live/test_deepseek_reasoning_live.py`. |
+| `README.md` | `README.md` | Documents gates (D7) and how to run offline / live / full suite. |
+| `AGENTS.md` | `AGENTS.md` | D3 coding-agent entry point. |
+| `architecture-blueprint.md` | `architecture-blueprint.md` | D2.1 master constraint document. |
+| `Prompt.md` | `Prompt.md` | D9 static startup prompt. |
+| `Report.md` | `Report.md` | D6 process report (skeleton; team to fill). |
 | `docs/req/requirements.yaml` | `docs/req/requirements.yaml` | D1 registry. |
-| `docs/req/req-schema.json` | `docs/req/req-schema.json` | D1 schema (added Phase 1). |
-| `docs/architecture/*` | `docs/architecture/` | `trace-matrix.md`, `invariants.md`, `repository-structure-mapping.md`, and `adr/001-eval-harness.md` added (Phase 2); architecture-blueprint and remaining artifacts pending. |
-| `docs/evidence/*` | `docs/evidence/` | `docs/evidence/e1/` added (Phase 2, mirrors `docs/evidence/fr-a1/`). |
-| `docs/ai-use-log.yaml` | `docs/ai-use-log.yaml` | D1 AI-use log (added Phase 2). |
-| `docs/code-governance/*` | *(pending)* | D3/D4 files. |
-| `docs/review-memo.md`, `docs/debt-register.md`, `docs/bug-diary.md` | *(pending)* | D4 QA records. |
-| `.opencode/`, `.agent/` | *(pending)* | D3 permission/rules files. |
-| `.github/workflows/ci.yml` | `.github/workflows/ci.yml` | D4/D7 gates (six gates wired in Phase 4). |
-| `prompts/prompt_v1.*.yaml` | *(pending)* | Versioned runtime prompts. |
-| `transcripts/<student-id>-<student-name>.md` | `transcripts/60572233-HUANG-SIYING.md` | D5; renamed to the required convention; the other four member transcripts are still pending. |
+| `docs/req/req-schema.json` | `docs/req/req-schema.json` | D1 CI schema. |
+| `docs/architecture/*` | `docs/architecture/` | `adr/`, `invariants.md`, `trace-matrix.md`, `memory-design.md`, `permission-model.md`, `runtime-policy-catalog.md`, `evaluation-table.md`, `evaluation-logbook.md`, `risk-list.md`, `option-ledger.md`, `repository-structure-mapping.md`. |
+| `docs/evidence/*` | `docs/evidence/` | e1 / fr-a1 / fr-b2 / fr-c2 evidence folders. |
+| `docs/ai-use-log.yaml` | `docs/ai-use-log.yaml` | D1 AI-use log. |
+| `docs/code-governance/*` | `docs/code-governance/` | D3/D4: structural-constraints, verification-constraints, mcp-tool-manifest. |
+| `docs/review-memo.md`, `docs/debt-register.md`, `docs/bug-diary.md` | `docs/` | D4 QA records. |
+| `.opencode/`, `.agent/` | `.opencode/`, `.agent/` | D3 permissions + rules. |
+| `.github/workflows/ci.yml` | `.github/workflows/ci.yml` | D4/D7 six blocking gates. |
+| `prompts/prompt_v1.*.yaml` | *(not present)* | Versioned runtime prompts not yet added; runtime prompts are inlined in agent modules. |
+| `transcripts/<student-id>-<student-name>.md` | `transcripts/` | D5: E, B2, C2 present; A1/governance not recorded (see AI-use log). |
 
-## Why no physical migration now
+## Why the earlier "mapping-only" decision changed
 
-- The baseline is an upstream-derived package named `tradingagents`; renaming its
-  import root to `src` would break every import and the packaging entry point,
-  and is out of scope for NFR-E1.
-- The `integration` marker already separates deterministic from live tests; a
-  physical `test/offline` + `test/live` split adds no behavioural guarantee.
-- Reviewers can use this table to locate every specified artifact. A physical
-  migration remains a team/PM decision, recorded here for transparency.
+- The team chose to physically adopt the D8 layout so reviewers find `src/` and
+  `test/offline|live/` exactly where the spec expects them.
+- The `src/` layout keeps package import names unchanged (`tradingagents`,
+  `cli`, `eval`, `fr_b2`); `pyproject.toml` sets `packages.find where=["src"]`
+  and `testpaths = ["test/offline", "test/live"]`.
+- Cross-test imports were updated from `tests.*` to `test.offline.*`; a physical
+  `test/live/` now isolates the only API-dependent test.

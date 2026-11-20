@@ -31,7 +31,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_PY_DIRS = ("tradingagents", "cli", "eval", "scripts")
+_PY_DIRS = ("src/tradingagents", "src/cli", "src/eval", "src/fr_b2", "scripts")
 
 
 def _run(cmd: list[str]) -> tuple[int, str]:
