@@ -25,6 +25,7 @@ from tradingagents.graph.trading_graph import TradingAgentsGraph
 
 from .golden import GoldenCase
 from .manifest import build_manifest
+from .manifest_rules import normalize_integrations
 from .sources import EvalContext
 
 
@@ -52,8 +53,12 @@ def _config_hash(config: dict) -> str:
     return hashlib.sha256(blob).hexdigest()[:12]
 
 
-def run_case(case: GoldenCase, ctx: EvalContext, config: dict, run_id: str | None = None) -> CaseResult:
+def run_case(case: GoldenCase, ctx: EvalContext, config: dict, run_id: str | None = None,
+             integrations: dict | None = None) -> CaseResult:
     run_id = run_id or _new_run_id()
+    # Validate the A/B/D interface data before a run is spent; the manifest then
+    # records these verbatim (see eval/manifest_rules.py for the shapes).
+    integrations = normalize_integrations(integrations)
     # Give this run its own results_dir and memory log, both under the run's
     # directory. A shared results_dir would let runs overwrite one state log,
     # and a shared memory log would feed one run's decision into the next.
@@ -140,6 +145,7 @@ def run_case(case: GoldenCase, ctx: EvalContext, config: dict, run_id: str | Non
             output_paths=output_paths,
             config_hash=_config_hash(config),
             run_id=run_id,
+            integrations=integrations,
         )
 
         manifest_file = out_dir / "manifest.json"

@@ -12,8 +12,10 @@ replay (``FR-E4``).
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager, ExitStack, contextmanager
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 import pandas as pd
@@ -27,6 +29,46 @@ from tradingagents.agents import context, schemas
 from tradingagents.agents.analysts import sentiment_analyst
 from tradingagents.dataflows import router
 from tradingagents.dataflows.vendors.yahoo import market as yahoo_market, snapshot
+
+# Modules whose source text defines the prompt templates used by a run. The
+# prompt text is inlined in these modules (there is no separate template file),
+# so hashing their bytes is a real content hash of the prompt templates: editing
+# any prompt changes the hash, and re-running unchanged code keeps it identical.
+_PROMPT_MODULES = (
+    "tradingagents/agents/analysts/fundamentals_analyst.py",
+    "tradingagents/agents/analysts/market_analyst.py",
+    "tradingagents/agents/analysts/news_analyst.py",
+    "tradingagents/agents/analysts/sentiment_analyst.py",
+    "tradingagents/agents/analysts/turn.py",
+    "tradingagents/agents/context.py",
+    "tradingagents/agents/managers/portfolio_manager.py",
+    "tradingagents/agents/managers/research_manager.py",
+    "tradingagents/agents/researchers/bear_researcher.py",
+    "tradingagents/agents/researchers/bull_researcher.py",
+    "tradingagents/agents/risk_mgmt/aggressive_debator.py",
+    "tradingagents/agents/risk_mgmt/conservative_debator.py",
+    "tradingagents/agents/risk_mgmt/neutral_debator.py",
+)
+
+
+def prompt_template_hash(root: str | Path | None = None) -> str:
+    """sha256 over the prompt-defining source text; stable for unchanged code.
+
+    Each file's repo-relative POSIX path and bytes are hashed in a fixed order so
+    the result is identical across machines (independent of file paths, mtimes,
+    and OS path separators) yet changes whenever any prompt template changes.
+
+    ``root`` overrides the repository root (used by tests to hash a controlled
+    copy of the modules); it defaults to this checkout.
+    """
+    package_root = Path(root) if root is not None else Path(__file__).resolve().parents[1]
+    digest = hashlib.sha256()
+    for rel in _PROMPT_MODULES:
+        digest.update(rel.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update((package_root / rel).read_bytes())
+        digest.update(b"\0")
+    return f"sha256:{digest.hexdigest()}"
 
 # The scripted model answers every free-text reader with this, and every
 # structured reader with the schemas below, so the decision is fixed.
@@ -69,6 +111,8 @@ class LLMSource(Protocol):
     def chat_model(self, tier: str) -> BaseChatModel: ...
 
     def snapshot_id(self) -> str: ...
+
+    def prompt_hash(self) -> str: ...
 
     def activate(self) -> AbstractContextManager[None]: ...
 
@@ -209,6 +253,10 @@ class ScriptedLLMSource:
     def snapshot_id(self) -> str:
         suffix = "-structured" if self.structured else ""
         return f"scripted-llm-v1:{self.ticker}:{self.trade_date}{suffix}"
+
+    def prompt_hash(self) -> str:
+        """Real sha256 of the prompt-template source that shapes this run."""
+        return prompt_template_hash()
 
     @contextmanager
     def activate(self) -> Iterator[None]:

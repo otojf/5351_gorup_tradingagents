@@ -14,7 +14,7 @@ Source of truth for statements/fit criteria: `docs/req/requirements.yaml`.
 | Source requirement | NFR-E1 (nested `INV-E1`) |
 | Type | invariant (zero tolerance) |
 | Enforcing component | `.github/workflows/ci.yml` (six blocking gates) + GitHub branch protection |
-| Verification method | `tests/test_eval_harness.py::test_invariant_no_merge_with_failing_gate` (Phase 4): a knowingly-bad PR fails its gate; secret scan = 0 findings; branch protection requires all six checks. |
+| Verification method | `tests/test_ci_gates.py::test_gate3_bad_input_missing_field` (a failing gate condition is detected locally); branch protection requires all nine checks plus one review (see `docs/evidence/e1/verification/branch-protection.md`); the only **live** bad-PR capture is PR #7 blocked by gate-3 (see `test-results.txt`); secret scan is a manual check. No unit test can prove GitHub branch protection itself. |
 | Operational fallback (on violation) | **Block / revert, notify, re-run.** (1) Do not merge; if already merged, revert the merge commit on `main` immediately. (2) Open an incident note in `docs/evidence/e1/verification/` naming the gate that was bypassed and the commit. (3) Notify the owning student and the PM owner. (4) Re-run the full gate set on the reverted state; only allow re-merge after 6/6 pass. For a leaked secret: rotate the key first, then purge it from history, then document in the incident note. |
 
 ## Other invariants (reference only — owned by other branches)

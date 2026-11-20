@@ -1,8 +1,15 @@
 """Run manifest: what produced a run, for comparing runs and auditing them.
 
-Fields required by ``requirements.yaml`` NFR-E1 are present. Ones the baseline
-cannot yet supply (degradations, risk verdicts, traceability) are recorded as
-``None`` with a reason in ``unavailable_sources``, rather than faked.
+Fields required by ``requirements.yaml`` NFR-E1 are present. ``prompt_hash`` is a
+real sha256 of the prompt-template source (see ``eval.sources.prompt_template_hash``);
+``prompt_source_id`` labels *which* scripted source produced the run (e.g.
+``scripted-llm-v1:NVDA:2026-01-09``) -- it is a source label, not a hash.
+
+Fields owned by other branches (degradations from A, risk verdicts from B,
+traceability from D) are injected via ``integrations`` (see
+``eval.manifest_rules`` for the interface contract and field shapes). When a
+caller supplies nothing they are recorded as ``None`` with a reason in
+``unavailable_sources``, rather than faked.
 """
 
 from __future__ import annotations
@@ -27,8 +34,18 @@ def _git_commit() -> str | None:
 def build_manifest(*, case: GoldenCase, graph, rating: str, config: dict,
                    ctx, tool_events: list[dict], tokens: dict,
                    latency_s: float, output_paths: dict, config_hash: str,
-                   run_id: str) -> dict:
+                   run_id: str, integrations: dict | None = None) -> dict:
     settings = graph.run_settings()
+
+    # Optional data owned by other branches (A: DEGRADED events, B: risk
+    # verdicts, D: evidence traceability). When a caller supplies nothing, the
+    # fields stay null with the reason in ``unavailable_sources``. When a caller
+    # supplies the normalized dicts, they are recorded verbatim -- the harness
+    # does not invent them.
+    integrations = integrations or {}
+    degradations = integrations.get("degradations")
+    risk_verdicts = integrations.get("risk_verdicts")
+    traceability = integrations.get("traceability")
 
     token_record = {
         "in": tokens.get("tokens_in", 0),
@@ -64,23 +81,27 @@ def build_manifest(*, case: GoldenCase, graph, rating: str, config: dict,
         },
         "commit": _git_commit(),
         "config_hash": config_hash,
-        "prompt_snapshot": ctx.llm.snapshot_id(),
+        "prompt_hash": ctx.llm.prompt_hash(),
+        "prompt_source_id": ctx.llm.snapshot_id(),
         "data_snapshot": ctx.source.snapshot_id(),
         "tokens": token_record,
         "latency_s": round(latency_s, 4),
-        "degradations": None,
-        "risk_verdicts": None,
-        "traceability": None,
+        "degradations": degradations,
+        "risk_verdicts": risk_verdicts,
+        "traceability": traceability,
         "tool_calls_total": tool_calls_total,
         "tool_call_requests_total": tool_call_requests_total,
         "tool_calls": tool_events,
         "output_paths": output_paths,
-        # Why a required-but-unavailable field is null. This is the honest
-        # boundary: the baseline has no structured event for these yet.
+        # Why a required-but-unavailable field is null. Only fields this run did
+        # not receive are listed here; injected fields are not "unavailable".
         "unavailable_sources": {
-            "degradations": "structured.py logs only; no DEGRADED event in state",
-            "risk_verdicts": "risk gate not implemented in baseline",
-            "traceability": "EvidenceRef not implemented in baseline",
+            "degradations": None if degradations is not None
+            else "structured.py logs only; no DEGRADED event in state",
+            "risk_verdicts": None if risk_verdicts is not None
+            else "risk gate not implemented in baseline",
+            "traceability": None if traceability is not None
+            else "EvidenceRef not implemented in baseline",
         },
         # What this manifest does and does not prove.
         "scope_note": (
