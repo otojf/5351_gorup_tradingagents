@@ -1,6 +1,6 @@
 schema_version: "1.0"
 project: "CS5351 Group Project - TradingAgents"
-updated: "2026-11-09"
+updated: "2026-11-11"
 source_document: "需求与分工-TradingAgents.md"
 options_file: "requirements-options.yaml"
 notes: >-
@@ -151,24 +151,80 @@ requirements:
       固定案例评测必须可复现：同一 commit/config/data 下评级稳定、指标波动 <= 5%；
       离线评测必须 <= 10 分钟；CI 必须配置六道 blocking gates。
     fit_criterion: >-
-      3 次重复运行评级 3/3 一致，token/延迟波动 <= 5%；
+      3 次重复运行评级 3/3 一致，token 波动 <= 5%；延迟只记录不断言 5% 带宽
+      （脚本化模型墙钟噪声过大，硬断言会 flaky）；
       固定 golden set 3–5 个案例 100% 执行并导出 before/after 对比表；
-      每次运行 manifest 完整（commit、model、prompt hash、config、data snapshot、
-      tokens、latency、degradations、risk verdicts、traceability）；
-      离线套件 p95 <= 10 分钟且 0 次网络调用；6/6 blocking gates 配置，
-      每个 gate 用故意坏 PR 验证能拦。
+      每次运行 manifest 完整（commit、model、prompt hash、prompt source id、config、
+      data snapshot、tokens、latency、degradations、risk verdicts、traceability）；
+      离线套件 <= 10 分钟且 0 次网络调用；6/6 blocking gates 配置，
+      每个 gate 用本地负向单测验证能拦，真实坏 PR 拦截证据目前仅 gate-3。
     priority: must
     owner: E
     component: "eval_harness"
     source: >-
       基线缺口：没有固定评测集；没有 run manifest；没有 CI gates；demo 不可复现。
     supporting_requirements:
-      - FR-E1
-      - FR-E2
-      - FR-E3
-      - INV-E1
+      - id: FR-E1
+        type: functional
+        category: functional_behavior
+        statement: >-
+          系统必须提供固定 golden set 3–5 个 (ticker, date) 及脚本化数据快照；
+          一条命令跑完并导出 before/after 对比表（CSV/MD）。
+        fit_criterion: >-
+          100% golden 案例执行；3 个不同 (ticker, date) 案例存在；
+          before/after 对比表 CSV/MD 均生成且含每案例真实差异。
+        verification:
+          test: "test_golden_set_has_three_distinct_cases"
+          monitor: "eval_pass_rate"
+          demo: "before/after 对比表"
+        status: implemented
+      - id: FR-E2
+        type: functional
+        category: functional_behavior
+        statement: >-
+          每次评测运行必须记录 manifest：commit、model、prompt hash、config、
+          data snapshot、tokens、latency、degradations、risk verdicts 和 traceability。
+        fit_criterion: >-
+          100% manifest 必填字段存在（commit、model、config_hash、prompt_hash、
+          prompt_source_id、data_snapshot、tokens、latency_s、tool_calls）；
+          prompt_hash 是对 prompt 模板源码计算的真实 sha256，prompt_source_id 只是
+          数据源标签（非 hash）；缺失字段显式记 null 并在 unavailable_sources 给出
+          原因，不得伪造；同 manifest 数据重跑评级稳定。
+        verification:
+          test: "test_run_one_golden_case_returns_rating_and_manifest"
+          monitor: "manifest_completeness"
+          demo: "manifest 展示与不可用字段原因"
+        status: partial
+      - id: FR-E3
+        type: functional
+        category: functional_behavior
+        statement: >-
+          CI 必须配置六道 blocking gates：test approval、static analysis、
+          schema、semantic eval、regression 和 AI-use log。
+        fit_criterion: >-
+          6/6 gate 在 CI 中配置且在 PR 上阻断；每个 gate 用故意坏 PR 验证能拦；
+          好 PR 全过；未覆盖的子项（type-check、contract、security、permission）
+          在 README 与 CI 注释中显式列出，不假装覆盖。
+        verification:
+          test: "test_gate_scripts_importable_and_have_main"
+          monitor: "ci_gate_status"
+          demo: "故意坏 PR 被对应 gate 拦下"
+        status: partial
+      - id: INV-E1
+        type: invariant
+        category: invariant
+        statement: >-
+          任一 blocking gate 失败不得合并；仓库不得包含 secret。
+        fit_criterion: >-
+          分支保护要求 6 项检查；secret 扫描 0 发现；坏 PR 0 合并；
+          回归套件 invariant violation = 0。
+        verification:
+          test: "test_gate3_bad_input_missing_field"
+          monitor: "gate_failures"
+          demo: "分支保护配置与坏 PR 拦截"
+        status: partial
     verification:
-      test: "test_golden_set"
+      test: "test_suite_runs_three_times_with_stable_rating_reports_and_tokens"
       monitor: "eval_pass_rate"
       demo: "同案例 before/after 对比表；故意坏 PR 被 gate 拦下"
     status: draft

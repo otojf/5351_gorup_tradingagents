@@ -525,7 +525,7 @@ requirements:
     component: "ci_gates"
     source: "课程要求：六道 blocking gate。"
     verification:
-      test: "test_ci_six_gates"
+      test: "test_gate_scripts_importable_and_have_main"
       monitor: "ci_gate_status"
       demo: "坏 PR 被拦"
     status: draft
@@ -542,7 +542,7 @@ requirements:
     component: "ci_gates"
     source: "课程红线：blocking gates 与 secret 管理。"
     verification:
-      test: "test_invariant_no_merge_with_failing_gate"
+      test: "test_gate3_bad_input_missing_field"
       monitor: "gate_failures"
       demo: "分支保护与拦截"
     status: draft
