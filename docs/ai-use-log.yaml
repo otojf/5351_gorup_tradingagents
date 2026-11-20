@@ -168,6 +168,77 @@ entries:
     human_review_ref: "transcripts/60662195-RenLongteng.md#用户干预索引"
     status: "locally_committed_pending_team_review"
 
+  - commit_range: "46bde74..integration/team-features"
+    date: "2026-11-11"
+    owner: A
+    agent: "not recorded"
+    session_ref: >-
+      not recorded — no annotated D5 transcript exists for the FR-A1 session.
+      The FR-A1 evidence explicitly required that no synthetic transcript be
+      fabricated (docs/evidence/fr-a1/human-review-milestones.md, section 7).
+    session_id: null
+    summary: >-
+      FR-A1 deterministic, offline, auditable risk gate: a versioned-policy
+      evaluator returning APPROVED/REJECTED/NEEDS_REVIEW (R1-R6), the
+      Portfolio Manager boundary adapter, graph/state wiring, and the FR-A1
+      test suites (core, safety-edge, adapter, audit) plus the end-to-end
+      graph test updates.
+    files_changed:
+      - tradingagents/risk_gate/
+      - tests/risk_gate/
+      - tests/test_graph_end_to_end.py
+    human_approved_by: "pending (owner A to confirm; approvals referenced in docs/evidence/fr-a1/human-review-milestones.md)"
+    human_review_ref: >-
+      docs/evidence/fr-a1/contribution-summary.md and
+      human-review-milestones.md (gate-by-gate approvals; session id not
+      recorded)
+    status: draft
+
+  - commit_range: "46bde74..integration/team-features"
+    date: "2026-11-12"
+    owner: B
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: "transcripts/60245953-WANG Yixuan.md"
+    session_id: "ses_e30b2ced0ffeicCgqbTlJgUKg6"
+    summary: >-
+      FR-B2 report conclusion citation checker (fr_b2/check_citations.py, offline
+      stdlib) with its sources table, sample claims, and 12 offline tests, plus
+      the AAPL 2026-11-11 reproduction script and captured evidence.
+    files_changed:
+      - scripts/reproduce_aapl_2026-11-11.py
+      - fr_b2/
+    human_approved_by: "WANG Yixuan (60245953)"
+    human_review_ref: "transcripts/60245953-WANG Yixuan.md (Intervention index)"
+    status: draft
+
+  - commit_range: "46bde74..integration/team-features"
+    date: "2026-11-11"
+    owner: E
+    agent: "not recorded"
+    session_ref: >-
+      not recorded — the governance artifacts were authored on the
+      compliance/structure branch and integrated by commit fa795f1; no
+      annotated D5 transcript for that authoring session is present in
+      transcripts/.
+    session_id: null
+    summary: >-
+      Repository governance/structure artifacts required by D3/D4: the coding
+      agent entry point and static prompt (AGENTS.md, Prompt.md), the
+      project covenant and always-on rules (.agent/rules.md, .opencode/rules.md,
+      .opencode/permissions.jsonc), and the code-governance docs
+      (structural-constraints, verification-constraints, mcp-tool-manifest).
+    files_changed:
+      - AGENTS.md
+      - Prompt.md
+      - .agent/
+      - .opencode/
+      - docs/code-governance/
+    human_approved_by: "pending (authoring owner to confirm; integrated via commit fa795f1)"
+    human_review_ref: >-
+      integration commit fa795f1 (compliance/structure); authoring session id
+      not recorded
+    status: draft
+
 
 notes: >-
   Merged integration log: entries from owners E (NFR-E1), D (FR-D2) and C
