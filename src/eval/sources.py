@@ -3,7 +3,7 @@
 The interfaces are shaped for recording/replay later (``Source``/``LLMSource``
 return the data a vendor would, plus a snapshot id). The only implementation in
 Slice 1 is scripted: it patches the same points the offline end-to-end test does
-(``tests/test_graph_end_to_end.py``), so no production code changes.
+(``test/offline/test_graph_end_to_end.py``), so no production code changes.
 
 What this proves: the harness and the graph structure are deterministic under a
 fixed source. It does NOT prove real-input reproducibility; that needs recorded

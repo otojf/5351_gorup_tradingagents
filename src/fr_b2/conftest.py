@@ -1,5 +1,8 @@
-"""Make the workspace root importable so ``from fr_b2 import ...`` works offline
-without installing the package. Purely test scaffolding.
+"""Make the package's parent (``src/``) importable so ``from fr_b2 import ...``
+works without installing the package. Purely test scaffolding.
+
+Under the D8 ``src/`` layout ``parents[1]`` is ``src/`` (the directory that
+contains the ``fr_b2`` package), which is what must be on ``sys.path``.
 """
 
 import sys
