@@ -146,23 +146,26 @@ def _evaluate_integrity(inputs: RiskInputs, direction, consistent: bool,
             return _rule(R6, RuleOutcome.UNKNOWN, f"{name} is not finite")
 
     portfolio = inputs.portfolio
-    if portfolio is not None:
-        try:
-            validate_snapshot(portfolio, inputs.trade_date)
-        except SnapshotError as exc:
-            return _rule(R6, RuleOutcome.UNKNOWN, f"portfolio snapshot unusable: {exc}")
+    if portfolio is None:
+        # No account context means the cap and sector checks cannot be verified;
+        # even a HOLD is only actionable after an explicit evaluation.
+        return _rule(R6, RuleOutcome.UNKNOWN, "portfolio snapshot is missing")
+    try:
+        validate_snapshot(portfolio, inputs.trade_date)
+    except SnapshotError as exc:
+        return _rule(R6, RuleOutcome.UNKNOWN, f"portfolio snapshot unusable: {exc}")
 
-        # Affordability of a cash-funded increase, when the buy size is known.
-        tp = inputs.target_position
-        if tp is not None and weight_problem(tp.target_position_weight) is None:
-            weight = tp.target_position_weight
-            current = current_stock_value(portfolio, inputs.ticker)
-            projected = projected_stock_value(weight, portfolio.portfolio_value)
-            increase = projected - current
-            if increase > portfolio.cash + 1e-9:
-                return _rule(R6, RuleOutcome.UNKNOWN,
-                             "purchase is not affordable from available cash",
-                             observed=increase, threshold=portfolio.cash)
+    # Affordability of a cash-funded increase, when the buy size is known.
+    tp = inputs.target_position
+    if tp is not None and weight_problem(tp.target_position_weight) is None:
+        weight = tp.target_position_weight
+        current = current_stock_value(portfolio, inputs.ticker)
+        projected = projected_stock_value(weight, portfolio.portfolio_value)
+        increase = projected - current
+        if increase > portfolio.cash + 1e-9:
+            return _rule(R6, RuleOutcome.UNKNOWN,
+                         "purchase is not affordable from available cash",
+                         observed=increase, threshold=portfolio.cash)
     return _rule(R6, RuleOutcome.PASS, "inputs are present and consistent")
 
 

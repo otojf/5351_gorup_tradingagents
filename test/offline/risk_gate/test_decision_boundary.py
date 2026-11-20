@@ -128,6 +128,50 @@ def test_missing_required_information_is_needs_review_and_review(tmp_path, monke
     assert state["model_rating"] == "Buy"
 
 
+@pytest.mark.unit
+def test_approved_hold_publishes_hold_not_review(tmp_path, monkeypatch, offline):
+    """[SAFETY] An approved HOLD is NO_TRADE but keeps the model rating (ADR §13.2)."""
+    from tradingagents.agents import schemas
+
+    graph = _graph(
+        tmp_path, monkeypatch,
+        _buy_proposal(action=schemas.TraderAction.HOLD, entry_price=None, stop_loss=None),
+        _buy_decision(rating=schemas.PortfolioRating.HOLD, price_target=None),
+        risk_portfolio=RISK_PORTFOLIO,
+    )
+    state, signal = graph.propagate("NVDA", e2e.TRADE_DATE)
+
+    assert state["risk_verdict"] == "APPROVED"
+    assert state["decision_status"] == "NO_TRADE"
+    assert signal == "Hold"
+    assert state["model_rating"] == "Hold"
+
+
+@pytest.mark.unit
+def test_trader_declared_100_percent_sizing_is_rejected(tmp_path, monkeypatch, offline):
+    """[SAFETY] The Trader's own sizing can tighten the caller's 5% target."""
+    graph = _graph(tmp_path, monkeypatch,
+                   _buy_proposal(position_sizing="100% of portfolio"),
+                   _buy_decision(), risk_portfolio=RISK_PORTFOLIO)
+    state, signal = graph.propagate("NVDA", e2e.TRADE_DATE)
+
+    assert state["risk_verdict"] == "REJECTED"
+    assert state["decision_status"] == "BLOCKED"
+    assert signal == RATING_REVIEW
+
+
+@pytest.mark.unit
+def test_malformed_risk_portfolio_is_needs_review_not_a_crash(tmp_path, monkeypatch, offline):
+    """[SAFETY] A malformed config value degrades to an auditable NEEDS_REVIEW."""
+    graph = _graph(tmp_path, monkeypatch, _buy_proposal(), _buy_decision(),
+                   risk_portfolio="not-a-dict")
+    state, signal = graph.propagate("NVDA", e2e.TRADE_DATE)
+
+    assert state["risk_verdict"] == "NEEDS_REVIEW"
+    assert state["decision_status"] == "PENDING_REVIEW"
+    assert signal == RATING_REVIEW
+
+
 # ---------------------------------------------------------------------------
 
 def _run_real_cli(tmp_path, monkeypatch, trader_proposal, portfolio_decision):

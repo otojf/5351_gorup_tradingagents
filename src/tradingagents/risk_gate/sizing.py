@@ -11,6 +11,53 @@ Pure arithmetic: no network, file I/O, LLM, or LangGraph import.
 from __future__ import annotations
 
 import math
+import re
+import unicodedata
+
+_PERCENT = re.compile(r"(?<![\d.])(\d+(?:\.\d+)?)\s*(?:%|percent\b)", re.IGNORECASE)
+_FRACTION = re.compile(
+    r"(?<![\d.])(0?\.\d+)\s+(?:of\s+)?(?:the\s+)?(?:portfolio|book|account|position)\b",
+    re.IGNORECASE,
+)
+_RANGE = re.compile(r"\d\s*(?:%|percent)?\s*(?:-|–|—|\bto\b)\s*\d", re.IGNORECASE)
+_VAGUE = re.compile(
+    r"\b(?:about|approximately|approx\.?|roughly|around|up to|at most|at least|"
+    r"between|over|under)\b",
+    re.IGNORECASE,
+)
+_NEGATIVE = re.compile(r"(?<![\w.])-\s*\d")
+_CONTEXT = re.compile(r"\b(?:portfolio|book|account|position)\b", re.IGNORECASE)
+
+
+def parse_position_sizing(text: str | None) -> float | None:
+    """Read one explicit portfolio percentage from the Trader's free text.
+
+    Returns a fraction (``"5% of portfolio"`` -> ``0.05``) or ``None`` when the
+    text is absent, vague, a range, negative, or not clearly a fraction of the
+    portfolio. The gate may use a parsed value only to tighten or reject a
+    caller-supplied target weight; it is never sufficient by itself to approve.
+    """
+    if not isinstance(text, str):
+        return None
+    normalized = unicodedata.normalize("NFKC", text).strip()
+    if not normalized:
+        return None
+    if _VAGUE.search(normalized) or _RANGE.search(normalized) or _NEGATIVE.search(normalized):
+        return None
+
+    percents = _PERCENT.findall(normalized)
+    if percents:
+        if len(percents) != 1:
+            return None
+        bare = re.fullmatch(r"\d+(?:\.\d+)?\s*(?:%|percent)", normalized, re.IGNORECASE)
+        if bare is None and _CONTEXT.search(normalized) is None:
+            return None
+        return float(percents[0]) / 100.0
+
+    fractions = _FRACTION.findall(normalized)
+    if len(fractions) == 1:
+        return float(fractions[0])
+    return None
 
 
 def weight_problem(weight: float | None) -> str | None:

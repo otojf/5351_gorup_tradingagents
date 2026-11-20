@@ -26,7 +26,10 @@ calls: list = []
 def test_no_arguments_still_runs_an_analysis(runner):
     assert runner.invoke(m.app, []).exit_code == 0
     no_flags = {"ticker": None, "date": None, "analysts": None, "save": None, "show": None, "html": None}
-    assert calls == [("analysis", {"checkpoint": None, "portfolio": None, "flags": no_flags})]
+    assert calls == [(
+        "analysis",
+        {"checkpoint": None, "portfolio": None, "risk_portfolio": None, "flags": no_flags},
+    )]
 
 
 @pytest.mark.unit

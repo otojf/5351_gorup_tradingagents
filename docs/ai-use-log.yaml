@@ -300,6 +300,40 @@ entries:
       Local migration only; not pushed. Rationale to be confirmed by owner.
     status: draft
 
+  - commit_range: "4ae4fef..integration/a1-fix"
+    date: "2026-11-20"
+    owner: A
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e081bae8cffeus7tLwpTQf6a4H (see
+      transcripts/60572233-HUANG-SIYING.md — Appendix D "integration and D8
+      structure repair"; A1 fix ported into the integration workstream)
+    session_id: "ses_e081bae8cffeus7tLwpTQf6a4H"
+    summary: >-
+      FR-A1 fix ported from the local integration worktree onto the D8 tree:
+      approved HOLD no longer downgraded to REVIEW; Trader position_sizing is
+      parsed and can only tighten/reject (unparseable -> R6 UNKNOWN); production
+      path can inject risk_portfolio via config/CLI (--risk-portfolio) instead of
+      always REVIEW; malformed risk_portfolio fails closed to
+      NEEDS_REVIEW/PENDING_REVIEW instead of crashing (and the audit directory
+      write raises AuditPersistenceError instead of silently skipping). Includes
+      portfolio_file loader, examples/risk_portfolio.example.json, and new/updated
+      risk-gate + CLI tests.
+    files_changed:
+      - src/tradingagents/risk_gate/
+      - src/tradingagents/default_config.py
+      - src/cli/
+      - test/offline/risk_gate/
+      - test/offline/test_cli_commands.py
+      - test/offline/test_portfolio_context.py
+      - examples/
+      - docs/ai-use-log.yaml
+    human_approved_by: "pending (owner A to confirm before merge)"
+    human_review_ref: >-
+      Ported from the owner's local integration/local-fixes worktree; owner A to
+      review the current-tree adaptation before merge.
+    status: draft
+
 
 notes: >-
   Merged integration log: entries from owners E (NFR-E1), D (FR-D2) and C

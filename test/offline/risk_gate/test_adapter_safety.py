@@ -44,16 +44,14 @@ def test_approved_without_audit_destination_is_never_actionable():
 
 @pytest.mark.unit
 def test_unusable_audit_directory_cannot_silently_bypass_audit(tmp_path):
-    """[SAFETY] An unusable audit directory must not silently skip persistence."""
+    """[SAFETY] An unusable audit directory must fail closed with an audit error."""
+    from tradingagents.risk_gate.adapter import AuditPersistenceError
+
     # A path under an existing *file* cannot be a directory.
     blocker = tmp_path / "not_a_dir"
     blocker.write_text("x")
-    try:
-        result = _apply(audit_dir=blocker / "audit")
-    except OSError:
-        return  # explicit fail-closed on an unwritable destination is acceptable
-    # If it did not raise, it must not be actionable.
-    assert result["decision_status"] != "ACTIONABLE"
+    with pytest.raises(AuditPersistenceError):
+        _apply(audit_dir=blocker / "audit")
 
 
 @pytest.mark.unit
@@ -148,19 +146,16 @@ def test_non_dict_risk_portfolio_never_actionable(bad, tmp_path):
      "holdings": [{"ticker": "NVDA", "market_value": "x", "sector": "Technology"}]},
     {"cash": 1.0},  # missing portfolio_value/valuation_date
 ], ids=["bad_value_type", "bad_market_value", "missing_fields"])
-def test_invalid_snapshot_schema_never_actionable(snapshot, tmp_path):
-    """[SAFETY] An invalid snapshot schema yields NEEDS_REVIEW or a fail-closed
-    exception, never ACTIONABLE."""
+def test_invalid_snapshot_schema_fails_closed_without_crashing(snapshot, tmp_path):
+    """[SAFETY] An invalid snapshot schema yields an auditable NEEDS_REVIEW."""
     from tradingagents.risk_gate.adapter import apply_gate
     rp = {"snapshot": snapshot, "target_position": {"target_position_weight": 0.05,
                                                     "sector": "Technology"}}
-    try:
-        result = apply_gate("NVDA", "2026-01-09", _buy_proposal(), _buy_decision(), rp,
-                            audit_dir=tmp_path / "audit")
-    except Exception:
-        return
-    assert result["risk_verdict"] != "APPROVED"
-    assert result["decision_status"] != "ACTIONABLE"
+    result = apply_gate("NVDA", "2026-01-09", _buy_proposal(), _buy_decision(), rp,
+                        audit_dir=tmp_path / "audit")
+    assert result["risk_verdict"] == "NEEDS_REVIEW"
+    assert result["decision_status"] == "PENDING_REVIEW"
+    assert result["final_rating"] == "REVIEW"
 
 
 @pytest.mark.unit
@@ -170,14 +165,68 @@ def test_invalid_snapshot_schema_never_actionable(snapshot, tmp_path):
     {"target_position_weight": 2.0, "sector": "Technology"},
     "not-a-dict",
 ], ids=["bad_str", "negative", "over_one", "not_dict"])
-def test_malformed_target_position_never_actionable(target, tmp_path):
-    """[SAFETY] A malformed target_position never yields an ACTIONABLE result."""
+def test_malformed_target_position_fails_closed_without_crashing(target, tmp_path):
+    """[SAFETY] A malformed target_position yields an auditable NEEDS_REVIEW."""
     from tradingagents.risk_gate.adapter import apply_gate
     rp = {"snapshot": RISK_PORTFOLIO["snapshot"], "target_position": target}
-    try:
-        result = apply_gate("NVDA", "2026-01-09", _buy_proposal(), _buy_decision(), rp,
-                            audit_dir=tmp_path / "audit")
-    except Exception:
-        return
-    assert result["risk_verdict"] != "APPROVED"
-    assert result["decision_status"] != "ACTIONABLE"
+    result = apply_gate("NVDA", "2026-01-09", _buy_proposal(), _buy_decision(), rp,
+                        audit_dir=tmp_path / "audit")
+    assert result["risk_verdict"] == "NEEDS_REVIEW"
+    assert result["decision_status"] == "PENDING_REVIEW"
+
+
+@pytest.mark.unit
+def test_non_mapping_risk_portfolio_fails_closed():
+    """[SAFETY] A non-mapping config value is ignored, not crashed on."""
+    from tradingagents.risk_gate.adapter import apply_gate
+    result = apply_gate("NVDA", "2026-01-09", _buy_proposal(), _buy_decision(),
+                        "not-a-dict")
+    assert result["risk_verdict"] == "NEEDS_REVIEW"
+    assert result["final_rating"] == "REVIEW"
+
+
+@pytest.mark.unit
+def test_approved_hold_keeps_model_rating(tmp_path):
+    """[SAFETY] An approved HOLD is NO_TRADE but still publishes the model rating."""
+    from tradingagents.agents import schemas
+    from tradingagents.risk_gate.adapter import apply_gate
+    hold = _buy_proposal(action=schemas.TraderAction.HOLD, entry_price=None, stop_loss=None)
+    decision = _buy_decision(rating=schemas.PortfolioRating.HOLD, price_target=None)
+    result = apply_gate("NVDA", "2026-01-09", hold, decision, RISK_PORTFOLIO,
+                        audit_dir=tmp_path / "audit")
+    assert result["risk_verdict"] == "APPROVED"
+    assert result["decision_status"] == "NO_TRADE"
+    assert result["final_rating"] == "Hold"
+
+
+@pytest.mark.unit
+def test_proposal_sizing_above_cap_is_rejected(tmp_path):
+    """[SAFETY] The Trader's own 100% sizing cannot be approved by a 5% config."""
+    from tradingagents.risk_gate.adapter import apply_gate
+    result = apply_gate("NVDA", "2026-01-09",
+                        _buy_proposal(position_sizing="100% of portfolio"),
+                        _buy_decision(), RISK_PORTFOLIO, audit_dir=tmp_path / "audit")
+    assert result["risk_verdict"] == "REJECTED"
+    assert result["final_rating"] == "REVIEW"
+
+
+@pytest.mark.unit
+def test_proposal_sizing_within_cap_is_approved(tmp_path):
+    """A parseable in-cap sizing still allows an otherwise safe BUY."""
+    from tradingagents.risk_gate.adapter import apply_gate
+    result = apply_gate("NVDA", "2026-01-09",
+                        _buy_proposal(position_sizing="6% of portfolio"),
+                        _buy_decision(), RISK_PORTFOLIO, audit_dir=tmp_path / "audit")
+    assert result["risk_verdict"] == "APPROVED"
+    assert result["final_rating"] == "Buy"
+
+
+@pytest.mark.unit
+def test_unparseable_proposal_sizing_cannot_be_approved(tmp_path):
+    """[SAFETY] Vague free text is UNKNOWN, even with a good config snapshot."""
+    from tradingagents.risk_gate.adapter import apply_gate
+    result = apply_gate("NVDA", "2026-01-09",
+                        _buy_proposal(position_sizing="about a third"),
+                        _buy_decision(), RISK_PORTFOLIO, audit_dir=tmp_path / "audit")
+    assert result["risk_verdict"] == "NEEDS_REVIEW"
+    assert result["final_rating"] == "REVIEW"

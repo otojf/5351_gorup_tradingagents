@@ -97,8 +97,18 @@ def test_approved_hold_is_no_trade():
     """FR-A1 §5.2: an approved HOLD is NO_TRADE, never ACTIONABLE."""
     data = make_buy(action="Hold", model_rating="Hold",
                     entry_price=None, stop_loss=None, price_target=None,
+                    target_position=None)
+    result = evaluate(data)
+    assert result.verdict == "APPROVED"
+    assert result.decision_status == "NO_TRADE"
+
+
+@pytest.mark.unit
+def test_hold_without_snapshot_fails_closed():
+    """FR-A1: no account snapshot means even a HOLD needs human review."""
+    data = make_buy(action="Hold", model_rating="Hold",
+                    entry_price=None, stop_loss=None, price_target=None,
                     target_position=None, portfolio=None)
     result = evaluate(data)
-    assert result.decision_status != "ACTIONABLE"
-    if result.verdict == "APPROVED":
-        assert result.decision_status == "NO_TRADE"
+    assert result.verdict == "NEEDS_REVIEW"
+    assert result.decision_status == "PENDING_REVIEW"

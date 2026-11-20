@@ -25,6 +25,19 @@ HOLDING = {
     ],
 }
 
+RISK_SNAPSHOT = {
+    "snapshot": {
+        "valuation_date": "2026-01-09",
+        "portfolio_value": 100000.0,
+        "cash": 83000.0,
+        "holdings": [
+            {"ticker": "AAPL", "market_value": 2000.0, "sector": "Technology"},
+            {"ticker": "MSFT", "market_value": 15000.0, "sector": "Technology"},
+        ],
+    },
+    "target_position": {"target_position_weight": 0.05, "sector": "Technology"},
+}
+
 
 @pytest.mark.unit
 def test_position_in_the_analyzed_instrument_leads_the_render():
@@ -281,3 +294,40 @@ def test_cli_passes_a_valid_portfolio_into_the_run(tmp_path, monkeypatch):
 
     assert result.exit_code == 0
     assert ran[0]["portfolio"].position_in("AAPL").quantity == 120
+
+
+@pytest.mark.unit
+def test_cli_rejects_an_unusable_risk_portfolio_before_running(tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    import cli.main as m
+
+    bad = tmp_path / "bad-risk.json"
+    bad.write_text(json.dumps({"snapshot": {**RISK_SNAPSHOT["snapshot"], "cash": 1.0}}))
+    ran = []
+    monkeypatch.setattr(m, "run_analysis", lambda **k: ran.append(k))
+
+    result = CliRunner().invoke(
+        m.app, ["--date", "2026-01-09", "--risk-portfolio", str(bad)]
+    )
+
+    assert result.exit_code == 1 and ran == []
+
+
+@pytest.mark.unit
+def test_cli_passes_a_valid_risk_portfolio_into_the_run(tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    import cli.main as m
+
+    good = tmp_path / "risk.json"
+    good.write_text(json.dumps(RISK_SNAPSHOT))
+    ran = []
+    monkeypatch.setattr(m, "run_analysis", lambda **k: ran.append(k))
+
+    result = CliRunner().invoke(
+        m.app, ["--date", "2026-01-09", "--risk-portfolio", str(good)]
+    )
+
+    assert result.exit_code == 0
+    assert ran[0]["risk_portfolio"]["target_position"]["target_position_weight"] == 0.05

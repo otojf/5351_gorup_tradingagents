@@ -13,6 +13,7 @@ from tradingagents.backtest import iter_grid, run_backtest, summarize
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.llm_clients.openai_client import SIGNED_IN_PROVIDERS
 from tradingagents.portfolio import load_portfolio
+from tradingagents.risk_gate.portfolio_file import load_risk_portfolio
 
 # prompt_toolkit's win32 output module is importable only on Windows (it asserts
 # the platform at import time), so gate on the platform rather than catching the
@@ -53,6 +54,13 @@ def analyze(
         help="JSON file with current holdings and cash, so the trader, risk and "
         "portfolio agents size against your actual position.",
     ),
+    risk_portfolio: str = typer.Option(
+        None,
+        "--risk-portfolio",
+        help="JSON account snapshot (valuation date, portfolio value, cash, holdings, "
+        "target position) for the FR-A1 risk gate. Without it the gate returns REVIEW. "
+        "The repository example is illustrative test data, not a real account.",
+    ),
     ticker: str = typer.Option(None, "--ticker", help="Ticker to analyze, e.g. NVDA or 0700.HK; skips the prompt"),
     date: str = typer.Option(None, "--date", help="Analysis date, YYYY-MM-DD; skips the prompt"),
     analysts: str = typer.Option(
@@ -88,9 +96,22 @@ def analyze(
             console.print(f"[red]{exc}[/red]")
             raise typer.Exit(code=1) from None
 
+    risk_portfolio_input = None
+    if risk_portfolio:
+        try:
+            risk_portfolio_input = load_risk_portfolio(risk_portfolio, trade_date=date)
+        except ValueError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1) from None
+
     try:
         flags = {"ticker": ticker, "date": date, "analysts": analysts, "save": save, "show": show, "html": html}
-        run_analysis(checkpoint=checkpoint, portfolio=portfolio_context, flags=flags)
+        run_analysis(
+            checkpoint=checkpoint,
+            portfolio=portfolio_context,
+            risk_portfolio=risk_portfolio_input,
+            flags=flags,
+        )
     except _NO_CONSOLE_ERRORS:
         # A terminal with no console buffer cannot host the interactive prompts.
         # Emit one actionable line on stderr instead of a prompt_toolkit

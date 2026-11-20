@@ -20,13 +20,17 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from pathlib import Path
+
+from pydantic import ValidationError
 
 from tradingagents.agents.rating import RATING_REVIEW
 from tradingagents.dataflows.symbols import safe_ticker_component
 
 from . import evaluate_risk
 from .models import PortfolioRiskSnapshot, RiskEvaluation, RiskInputs, TargetPosition
+from .sizing import parse_position_sizing
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,54 @@ class AuditPersistenceError(RuntimeError):
     Fail-closed: no actionable recommendation may be published without a successful
     durable audit write.
     """
+
+
+def _configured_risk_inputs(risk_portfolio):
+    """Validate the caller's config mapping; unusable parts become None."""
+    if not risk_portfolio:
+        return None, None
+    if not isinstance(risk_portfolio, Mapping):
+        logger.warning("risk_portfolio is not a mapping; failing closed")
+        return None, None
+    try:
+        tp = risk_portfolio.get("target_position")
+        target_position = TargetPosition.model_validate(tp) if tp is not None else None
+        snap = risk_portfolio.get("snapshot")
+        portfolio = PortfolioRiskSnapshot.model_validate(snap) if snap is not None else None
+    except (ValidationError, TypeError, AttributeError) as exc:
+        logger.warning("risk_portfolio is unusable (%s); failing closed", exc)
+        return None, None
+    return target_position, portfolio
+
+
+def _effective_target_position(trader_proposal, configured):
+    """Combine the caller's target with the Trader's declared sizing.
+
+    Parsed text can only tighten the caller's number. An unparseable non-empty
+    sizing, or sizing without a caller target, is unusable (R2 UNKNOWN) and must
+    never become an approval on its own.
+    """
+    sizing = (
+        getattr(trader_proposal, "position_sizing", None)
+        if trader_proposal is not None
+        else None
+    )
+    if sizing is None:
+        return configured
+    if not isinstance(sizing, str):
+        return None
+    if not sizing.strip():
+        return configured
+    parsed = parse_position_sizing(sizing)
+    if parsed is None:
+        return None
+    if configured is None or configured.target_position_weight is None:
+        return None
+    weight = max(configured.target_position_weight, parsed)
+    return TargetPosition(
+        target_position_weight=weight,
+        sector=configured.sector,
+    )
 
 
 def _build_inputs_core(ticker, trade_date, trader_proposal, portfolio_decision, risk_portfolio):
@@ -61,15 +113,8 @@ def _build_inputs_core(ticker, trade_date, trader_proposal, portfolio_decision, 
         price_target = getattr(portfolio_decision, "price_target", None)
         model_rating = getattr(getattr(portfolio_decision, "rating", None), "value", None)
 
-    target_position = None
-    portfolio = None
-    if risk_portfolio:
-        tp = risk_portfolio.get("target_position")
-        if tp is not None:
-            target_position = TargetPosition.model_validate(tp)
-        snap = risk_portfolio.get("snapshot")
-        if snap is not None:
-            portfolio = PortfolioRiskSnapshot.model_validate(snap)
+    target_position, portfolio = _configured_risk_inputs(risk_portfolio)
+    target_position = _effective_target_position(trader_proposal, target_position)
 
     return RiskInputs(
         ticker=ticker,
@@ -90,9 +135,9 @@ def build_inputs(ticker, trade_date, trader_proposal, portfolio_decision, risk_p
 
 
 def _effective_rating(evaluation: RiskEvaluation) -> str:
-    """The effective public rating: the model rating only when APPROVED and
-    actionable; otherwise the REVIEW sentinel."""
-    if evaluation.verdict == "APPROVED" and evaluation.decision_status == "ACTIONABLE":
+    """The effective public rating: the model rating when APPROVED, including an
+    approved HOLD whose decision status is NO_TRADE; otherwise the REVIEW sentinel."""
+    if evaluation.verdict == "APPROVED":
         return evaluation.model_rating or RATING_REVIEW
     return RATING_REVIEW
 
@@ -162,6 +207,11 @@ def _audit_payload(evaluation: RiskEvaluation) -> dict:
     }
 
 
+def audit_payload(evaluation: RiskEvaluation) -> dict:
+    """Public serializer for the audit record (used by the eval manifest)."""
+    return _audit_payload(evaluation)
+
+
 def persist_audit(evaluation: RiskEvaluation, audit_dir=None):
     """Durable audit writer. Writes one JSON record per evaluation when a directory
     is given; otherwise returns the payload without touching disk (used for the
@@ -172,11 +222,18 @@ def persist_audit(evaluation: RiskEvaluation, audit_dir=None):
     """
     payload = _audit_payload(evaluation)
     if audit_dir is not None:
-        directory = Path(audit_dir)
-        directory.mkdir(parents=True, exist_ok=True)
-        ticker = safe_ticker_component(str(evaluation.input_snapshot.get("ticker", "unknown")))
-        stamp = evaluation.evaluated_at_utc.replace(":", "").replace(".", "").replace("-", "")
-        path = directory / f"risk_audit_{ticker}_{stamp}.json"
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=4, ensure_ascii=False)
+        try:
+            directory = Path(audit_dir)
+            directory.mkdir(parents=True, exist_ok=True)
+            ticker = safe_ticker_component(
+                str(evaluation.input_snapshot.get("ticker", "unknown"))
+            )
+            stamp = evaluation.evaluated_at_utc.replace(":", "").replace(".", "").replace("-", "")
+            path = directory / f"risk_audit_{ticker}_{stamp}.json"
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=4, ensure_ascii=False)
+        except OSError as exc:
+            raise AuditPersistenceError(
+                f"could not persist risk audit to {audit_dir}: {exc}"
+            ) from exc
     return payload

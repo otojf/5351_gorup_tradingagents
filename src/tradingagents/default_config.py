@@ -126,6 +126,10 @@ def build_default_config() -> dict:
         # Checkpoint/resume: when True, LangGraph saves state after each node
         # so a crashed run can resume from the last successful step.
         "checkpoint_enabled": False,
+        # FR-A1 account snapshot for the Portfolio Manager risk gate. None means
+        # fail closed to REVIEW; a dict of {"snapshot": ..., "target_position": ...}
+        # enables the gate. This is structured data, not the free-text --portfolio.
+        "risk_portfolio": None,
         # Output language for analyst reports and final decision
         # Internal agent debate stays in English for reasoning quality
         "output_language": "English",
