@@ -39,7 +39,7 @@ requirements:
       - NFR-A1
       - NFR-A2
     verification:
-      test: "test_risk_gate_violations"
+      test: "test_invariant_sweep_never_approves_violations"
       monitor: "risk_verdict_count"
       demo: "注入坏单，展示被拒绝、规则 ID 与审计记录"
     status: draft
@@ -71,10 +71,13 @@ requirements:
       - NFR-B1
       - NFR-B2
     verification:
-      test: "test_evidence_coverage"
+      test: "test_completed_citation_check_returns_zero_with_untraceable_results"
       monitor: "traceability_coverage"
-      demo: "点击一条结论跳到报告原文；无出处结论标 UNTRACEABLE"
-    status: draft
+      demo: >-
+        点击一条结论跳到报告原文；无出处结论标 UNTRACEABLE。
+        [partial] 仅 FR-B2 引用检查已实现；FR-B1 的结构化 EvidenceRef 字段、
+        100% 关键字段覆盖率与 <=1KB 存储上限尚未实现。
+    status: partial
 
   # ---------------------------------------------------------------------------
   # C. 成本可控（Owner C）
@@ -103,10 +106,13 @@ requirements:
       - FR-C3
       - NFR-C2
     verification:
-      test: "test_budget_cutoff"
+      test: "test_missing_key_one_log_no_http_sentinel_per_call"
       monitor: "run_tokens"
-      demo: "同一案例成本从 19.5 万降到 12 万以下；FRED 重试 7 次降到 0"
-    status: draft
+      demo: >-
+        同一案例成本从 19.5 万降到 12 万以下；FRED 重试 7 次降到 0。
+        [partial] 仅"缺凭据数据源跳过、0 次重试"(FR-C2)已实现并有测试；
+        token 预算/硬上限熔断/分 agent 用量账本等 token 阈值尚未实现。
+    status: partial
 
   # ---------------------------------------------------------------------------
   # D. 失败可见（Owner D）

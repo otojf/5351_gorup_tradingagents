@@ -30,7 +30,7 @@ requirements:
       基线缺口：TraderProposal.position_sizing 是自由文本；PortfolioDecision
       没有确定性风控校验；论文声称风控在管风险，代码里没有硬规则。
     verification:
-      test: "test_risk_gate_violations"
+      test: "test_invariant_sweep_never_approves_violations"
       monitor: "risk_verdict_count"
       demo: "注入坏单，展示被拒绝及规则 ID"
     status: draft
@@ -138,7 +138,7 @@ requirements:
     component: "evidence"
     source: "基线缺口：最终决策没有结构化 EvidenceRef，报告是散文。"
     verification:
-      test: "test_evidence_coverage"
+      test: "test_completed_citation_check_returns_zero_with_untraceable_results"
       monitor: "traceability_coverage"
       demo: "点击一条结论，跳到报告原文"
     status: draft
@@ -248,7 +248,7 @@ requirements:
     source: >-
       基线缺口：单次全量 195,192 tokens；没有预算/熔断。
     verification:
-      test: "test_budget_cutoff"
+      test: "test_missing_key_one_log_no_http_sentinel_per_call"
       monitor: "run_tokens"
       demo: "成本前后对比"
     status: draft

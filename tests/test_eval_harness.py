@@ -570,7 +570,11 @@ def test_run_makes_no_network_calls(tmp_path, monkeypatch):
         _config(tmp_path),
     )
 
-    assert result.rating == GOLDEN_SET[0].expected_rating
+    # This test verifies network isolation, not the risk-gate outcome. With the
+    # FR-A1 gate integrated and no risk_portfolio supplied the effective rating is
+    # REVIEW (fail-closed), so accept either (same E1 resolution as the other eval
+    # tests; see commit 71eba39).
+    assert result.rating in {GOLDEN_SET[0].expected_rating, "REVIEW"}
     assert attempts == [], f"run touched the network: {attempts}"
 
 
