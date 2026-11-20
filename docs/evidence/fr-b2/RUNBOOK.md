@@ -64,7 +64,7 @@ SUMMARY total=6 supported=1 untraceable=5
 
 ```bash
 python -m pytest fr_b2/tests -q
-# 12 passed
+# 18 passed (2026-11-20 review follow-up)
 ```
 
 ### 失败原因码
@@ -104,3 +104,20 @@ python -m pytest fr_b2/tests -q
 `docs/evidence/fr-b2/evidence/AAPL_2026-11-11/snapshot.txt` 为本次分析**前**独立调用官方
 `tradingagents.dataflows.vendors.yahoo.snapshot.build_verified_market_snapshot("AAPL","2026-11-11")`
 取得的核对证据：文本、可按行号定位，与真实分析同一会话、同一数据源。
+
+
+## 5. 团队仓库中的证据校验与退出码
+
+```bash
+python -m fr_b2.verify_evidence \
+  --manifest docs/evidence/fr-b2/evidence-sha256.json
+python -m pytest -q
+```
+
+指纹清单在 2026-11-20 对已保存的 25 份 AAPL 证据登记，全部匹配时返回 `0`。
+内容变化、文件缺失或不可读返回 `1`，清单格式或读取错误返回 `2`。
+清单登记时间晚于原始采集时间，来源信息见 `provenance.md`。
+
+`python -m fr_b2.check_citations` 正常完成返回 `0`，包括发现无法追溯结论的情况。
+调用方用结果 JSON 的 `summary` 和逐条状态处理这些发现。
+`--out` 与输入冲突时返回 `2`。评测和中央日志的交接见 `integration-notes.md`。

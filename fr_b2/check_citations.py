@@ -290,8 +290,8 @@ def main(argv=None) -> int:
         out_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print(render_human(result))
-    s = result["summary"]
-    return 0 if s["untraceable"] == 0 else 0
+    # Completion includes UNTRACEABLE findings; use the JSON summary to assess them.
+    return 0
 
 
 if __name__ == "__main__":
