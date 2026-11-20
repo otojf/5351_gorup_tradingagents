@@ -275,8 +275,8 @@ entries:
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
     session_ref: >-
       session ses_e081bae8cffeus7tLwpTQf6a4H (see
-      transcripts/60572233-HUANG-SIYING.md — Appendix C; this D8 migration is a
-      local follow-up in the same review-response workstream)
+      transcripts/60572233-HUANG-SIYING.md — Appendix D "integration and D8
+      structure repair")
     session_id: "ses_e081bae8cffeus7tLwpTQf6a4H"
     summary: >-
       D8 physical structure migration (integration layer): moved application
