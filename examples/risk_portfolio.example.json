@@ -1,0 +1,16 @@
+{
+  "_note": "Illustrative test data for the FR-A1 risk gate, not a real account. cash + sum(holdings.market_value) = portfolio_value, and valuation_date must equal the analysis date.",
+  "snapshot": {
+    "valuation_date": "2026-01-09",
+    "portfolio_value": 100000.0,
+    "cash": 83000.0,
+    "holdings": [
+      {"ticker": "NVDA", "market_value": 2000.0, "sector": "Technology"},
+      {"ticker": "MSFT", "market_value": 15000.0, "sector": "Technology"}
+    ]
+  },
+  "target_position": {
+    "target_position_weight": 0.05,
+    "sector": "Technology"
+  }
+}

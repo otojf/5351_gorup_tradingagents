@@ -1,0 +1,13 @@
+# NFR-E1 demo output (scripted, offline)
+
+golden cases: 3
+before analysts: market, social, news, fundamentals
+after analysts:  market, news, fundamentals
+
+case_id  before_rating  after_rating  before_tokens  after_tokens  token_delta_pct
+nvda-2026-01-09  REVIEW  REVIEW  2250  2100  -6.67
+aapl-2026-01-16  REVIEW  REVIEW  2250  2100  -6.67
+msft-2026-01-23  REVIEW  REVIEW  2250  2100  -6.67
+
+csv: compare.csv
+md:  compare.md
