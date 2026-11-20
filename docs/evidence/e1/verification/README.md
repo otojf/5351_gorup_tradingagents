@@ -1,9 +1,9 @@
 # NFR-E1 Verification Evidence
 
 `test-results.txt` holds the **actual** captured output of the verification
-commands run locally on 2026-11-11. It contains the real command lines,
-stdout/stderr, and exit codes — not a summary. These are **local** captures; the
-GitHub CI has not run yet, so no CI results are claimed.
+commands run locally on 2026-11-11, plus the GitHub Actions run URLs for PR #6
+and the temporary bad PR #7. It contains the real command lines, stdout/stderr,
+exit codes, and run links — not a summary.
 
 Gate 1 (test-approval) now passes locally: the human approval record was filled
 by HUANG SIYING (60572233) on 2026-11-11. The earlier local capture of the gate failing

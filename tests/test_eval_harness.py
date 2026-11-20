@@ -51,7 +51,8 @@ def test_run_one_golden_case_returns_rating_and_manifest(tmp_path):
     assert result.rating == case.expected_rating
     m = result.manifest
     for key in ("case_id", "ticker", "trade_date", "rating", "model", "config_hash",
-                "data_snapshot", "prompt_snapshot", "tool_calls_total", "output_paths"):
+                "data_snapshot", "prompt_hash", "prompt_source_id",
+                "tool_calls_total", "output_paths"):
         assert key in m, key
 
 
@@ -203,8 +204,15 @@ def test_suite_runs_three_times_with_stable_rating_reports_and_tokens(tmp_path):
     for key in ("market_report", "sentiment_report", "news_report", "fundamentals_report"):
         assert len({r.final_state[key] for r in results}) == 1, key
     assert len({json.dumps(r.manifest["tokens"], sort_keys=True) for r in results}) == 1
-    # Latency is recorded but not asserted to a 5% band: the scripted model's
-    # wall-clock noise is too large for that.
+    # NFR-E1 fit criterion: token fluctuation across repeats <= 5%. Under the
+    # fixed scripted source the counts are identical, so the spread is 0; assert
+    # the explicit band rather than relying on byte-equality above.
+    token_totals = [r.manifest["tokens"]["in"] + r.manifest["tokens"]["out"] for r in results]
+    spread = (max(token_totals) - min(token_totals)) / max(token_totals)
+    assert spread <= 0.05
+    # Latency is recorded (see test_offline_run_finishes_under_ten_minutes for
+    # the <= 10 min band); wall-clock 5% is not asserted because per-call
+    # scheduling noise exceeds it and would be flaky.
     for r in results:
         assert r.manifest["latency_s"] >= 0
 
@@ -486,3 +494,228 @@ def test_compare_covers_all_three_cases_with_a_real_difference(tmp_path):
     ][0]
     md_cols = [c.strip() for c in md_header.strip("|").split("|")]
     assert md_cols == header
+
+
+# ---------------------------------------------------------------------------
+# NFR-E1 fit criteria: token stability, zero network, offline <= 10 minutes
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_repeats_keep_token_count_within_five_percent(tmp_path):
+    """NFR-E1: token fluctuation across identical runs stays within 5%."""
+    from eval.golden import GOLDEN_SET
+    from eval.runner import run_suite
+    from eval.sources import EvalContext, ScriptedLLMSource, ScriptedSource
+
+    results = run_suite(
+        [GOLDEN_SET[0]],
+        EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource()),
+        _config(tmp_path),
+        runs=3,
+    )
+
+    totals = [r.manifest["tokens"]["in"] + r.manifest["tokens"]["out"] for r in results]
+    assert all(t > 0 for t in totals)
+    # Relative spread of the extremes; 0 under the fixed script, well under 5%.
+    spread = (max(totals) - min(totals)) / max(totals)
+    assert spread <= 0.05, (totals, spread)
+
+
+@pytest.mark.unit
+def test_run_makes_no_network_calls(tmp_path, monkeypatch):
+    """NFR-E1: 0 network calls. Any socket/urlopen attempt during a run fails."""
+    import socket
+    import urllib.request
+
+    from eval.golden import GOLDEN_SET
+    from eval.runner import run_case
+    from eval.sources import EvalContext, ScriptedLLMSource, ScriptedSource
+
+    attempts: list[str] = []
+
+    def _blocked_socket(*args, **kwargs):
+        attempts.append(f"socket{args!r}")
+        raise AssertionError("eval run attempted a network connection via socket")
+
+    def _blocked_create_connection(*args, **kwargs):
+        attempts.append(f"create_connection{args!r}")
+        raise AssertionError("eval run attempted a network connection")
+
+    def _blocked_urlopen(url, *args, **kwargs):
+        attempts.append(f"urlopen:{url!r}")
+        raise AssertionError("eval run attempted urllib network access")
+
+    # Patch the lowest-level entry points so any vendor/requests/urllib path
+    # (which all end here) is caught, not just one library.
+    monkeypatch.setattr(socket.socket, "connect", _blocked_socket)
+    monkeypatch.setattr(socket, "create_connection", _blocked_create_connection)
+    monkeypatch.setattr(urllib.request, "urlopen", _blocked_urlopen)
+
+    result = run_case(
+        GOLDEN_SET[0],
+        EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource()),
+        _config(tmp_path),
+    )
+
+    assert result.rating == GOLDEN_SET[0].expected_rating
+    assert attempts == [], f"run touched the network: {attempts}"
+
+
+@pytest.mark.unit
+def test_offline_run_finishes_under_ten_minutes(tmp_path):
+    """NFR-E1: the offline suite finishes in <= 10 minutes (600 s)."""
+    import time
+
+    from eval.golden import GOLDEN_SET
+    from eval.runner import run_suite
+    from eval.sources import EvalContext, ScriptedLLMSource, ScriptedSource
+
+    started = time.monotonic()
+    results = run_suite(
+        [GOLDEN_SET[0]],
+        EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource()),
+        _config(tmp_path),
+        runs=3,
+    )
+    elapsed_wall = time.monotonic() - started
+
+    assert len(results) == 3
+    # Both the manifest-recorded per-run latency and the measured wall clock must
+    # sit under the 10-minute ceiling. It is far under it; the ceiling is the
+    # criterion, not a tight bound (a tight bound would be flaky on slow CI).
+    for r in results:
+        assert r.manifest["latency_s"] < 600, r.manifest["latency_s"]
+    assert elapsed_wall < 600
+
+
+# ---------------------------------------------------------------------------
+# A/B/D integration interface: prompt hash + injected manifest fields
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_manifest_prompt_hash_is_real_sha256_and_stable(tmp_path):
+    """prompt_hash is a real sha256 of the prompt templates, not a label."""
+    import re
+
+    from eval.golden import GOLDEN_SET
+    from eval.runner import run_case
+    from eval.sources import EvalContext, ScriptedLLMSource, ScriptedSource, prompt_template_hash
+
+    ctx1 = EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource())
+    first = run_case(GOLDEN_SET[0], ctx1, _config(tmp_path / "a"))
+    ctx2 = EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource())
+    second = run_case(GOLDEN_SET[0], ctx2, _config(tmp_path / "b"))
+
+    m = first.manifest
+    assert re.fullmatch(r"sha256:[0-9a-f]{64}", m["prompt_hash"]), m["prompt_hash"]
+    # Stable for unchanged code, and equal to the module-level helper.
+    assert m["prompt_hash"] == second.manifest["prompt_hash"]
+    assert m["prompt_hash"] == prompt_template_hash()
+    # prompt_source_id is still the human label, kept separate from the hash.
+    assert m["prompt_source_id"].startswith("scripted-llm-v1:")
+    assert m["prompt_hash"] != m["prompt_source_id"]
+
+
+@pytest.mark.unit
+def test_prompt_hash_changes_when_prompt_content_changes(tmp_path):
+    """The hash is content-derived: editing a prompt module's bytes changes it.
+
+    Copy the prompt-defining modules into a temp tree, hash it, then change one
+    byte in one prompt module and hash again. This proves the value tracks real
+    prompt content rather than being a constant or a source label.
+    """
+    import shutil
+    from pathlib import Path
+
+    from eval.sources import _PROMPT_MODULES, prompt_template_hash
+
+    src_root = Path(__file__).resolve().parents[1]
+    root = tmp_path / "tree"
+    for rel in _PROMPT_MODULES:
+        dst = root / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src_root / rel, dst)
+
+    before = prompt_template_hash(root)
+    assert before == prompt_template_hash(root)  # deterministic
+    assert before == prompt_template_hash()       # matches this checkout
+
+    # Append a byte to one prompt module's source; the aggregate must change.
+    edited = root / _PROMPT_MODULES[1]
+    edited.write_bytes(edited.read_bytes() + b"\n# prompt tweak\n")
+    after = prompt_template_hash(root)
+
+    assert after != before, "prompt hash did not change when prompt content changed"
+    # And the real checkout's hash is unaffected by the temp-tree edit.
+    assert prompt_template_hash() == before
+
+
+
+@pytest.mark.unit
+def test_manifest_records_injected_integration_data(tmp_path):
+    """The A/B/D interface: supplied fake data lands in the manifest verbatim."""
+    from eval.golden import GOLDEN_SET
+    from eval.runner import run_case
+    from eval.sources import EvalContext, ScriptedLLMSource, ScriptedSource
+
+    integrations = {
+        "degradations": [
+            {"source": "fred", "reason": "timeout", "impact": "sentinel"},
+        ],
+        "risk_verdicts": [
+            {"gate": "position_size", "verdict": "flag", "detail": "8% > 5% cap"},
+        ],
+        "traceability": [
+            {"claim": "RSI 62", "evidence_ref": "tools/get_indicators#rsi"},
+        ],
+    }
+
+    result = run_case(
+        GOLDEN_SET[0],
+        EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource()),
+        _config(tmp_path),
+        integrations=integrations,
+    )
+    m = result.manifest
+
+    # Injected data is recorded as given (trimmed to known keys), and the
+    # unavailable-source reason is cleared because the field is now present.
+    assert m["degradations"] == integrations["degradations"]
+    assert m["risk_verdicts"] == integrations["risk_verdicts"]
+    assert m["traceability"] == integrations["traceability"]
+    for key in ("degradations", "risk_verdicts", "traceability"):
+        assert m["unavailable_sources"][key] is None, key
+
+
+@pytest.mark.unit
+def test_manifest_rejects_malformed_integration_data(tmp_path):
+    """A malformed producer fails at the seam, before a run is spent."""
+    from eval.golden import GOLDEN_SET
+    from eval.runner import run_case
+    from eval.sources import EvalContext, ScriptedLLMSource, ScriptedSource
+
+    ctx = EvalContext(source=ScriptedSource(), llm=ScriptedLLMSource())
+    with pytest.raises(ValueError, match="unknown keys"):
+        run_case(
+            GOLDEN_SET[0], ctx, _config(tmp_path),
+            integrations={"degradations": [{"source": "x", "bogus": 1}]},
+        )
+
+
+@pytest.mark.unit
+def test_manifest_normalizes_integration_keys():
+    """normalize_integrations keeps known keys, drops None, rejects unknown fields."""
+    from eval.manifest_rules import normalize_integrations
+
+    out = normalize_integrations({
+        "degradations": [{"source": "fred", "reason": "t", "at": None}],
+        "risk_verdicts": None,
+    })
+    assert out["degradations"] == [{"source": "fred", "reason": "t"}]
+    assert out["risk_verdicts"] is None
+    assert out["traceability"] is None
+
+    with pytest.raises(ValueError, match="unknown integration fields"):
+        normalize_integrations({"mystery": []})

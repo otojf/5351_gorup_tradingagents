@@ -31,17 +31,27 @@ only orients you:
 - `runner.py` — `run_case` (one case → rating + manifest), `run_suite` (isolated
   repeats; each run gets its own `run_id`, results dir, memory/state log).
 - `manifest.py` — the per-run manifest; unavailable fields are `null` with a
-  reason in `unavailable_sources` (never faked).
+  reason in `unavailable_sources` (never faked). `prompt_hash` is a real sha256
+  of the prompt-template source; `prompt_source_id` is the source label.
+- `manifest_rules.py` — the draft interface for the A/B/D-owned manifest fields
+  (degradations / risk verdicts / traceability): field shapes plus a normalizer.
 - `compare.py` — `compare(before, after)` writes `compare.csv` and `compare.md`.
 
 ## 2. What is proven vs not
 
-- Proven: deterministic rating/report/token output under a fixed scripted
-  source; per-run isolation; manifest completeness for available fields.
-- Not proven: real-input reproducibility (FR-E4 recording/replay).
+- Proven: deterministic rating/report output under a fixed scripted source; token
+  fluctuation across repeats `<= 5%` (0 under the script); **0 network calls**
+  during a run (socket/urlopen patched to fail); offline run `<= 10 minutes`;
+  per-run isolation; manifest completeness for available fields.
+- Proven as a seam only: the A/B/D fields accept well-formed injected data and
+  reject malformed data (`test_manifest_records_injected_integration_data`). No
+  real A1/B2/D2 producer is wired yet.
+- Not proven: real-input reproducibility (FR-E4 recording/replay); latency is not
+  asserted to a 5% band (wall-clock noise would make it flaky).
 - Six gate scripts and the CI workflow are wired; PR #6 runs all nine checks
-  green. Branch protection (9 checks + one review) is configured, and a real
-  bad PR (#7) was blocked by gate-3.
+  green. Branch protection (9 checks + one review) is configured. **Only gate-3
+  has live bad-PR evidence** (real bad PR #7 was blocked by the schema gate); the
+  other five gates have local negative unit tests only — no live bad PR.
 
 ## 3. Status
 

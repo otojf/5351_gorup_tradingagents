@@ -7,6 +7,35 @@ description: >-
 
 entries:
   - commit_range: "46bde74..feat/nfr-e1-eval"
+    date: "2026-11-20"
+    owner: E
+    agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
+    session_ref: >-
+      session ses_e081bae8cffeus7tLwpTQf6a4H (transcript export pending; not yet
+      exported/annotated to transcripts/)
+    session_id: "ses_e081bae8cffeus7tLwpTQf6a4H"
+    summary: >-
+      PR #6 review response (k11): replaced the two nonexistent test references
+      in the trace matrix / registry with real tests; made prompt_snapshot a real
+      sha256 (prompt_hash) plus a separate prompt_source_id label; added NFR-E1
+      metric tests (token <=5%, 0 network via patched socket/urlopen, offline
+      <=10 min); added the A/B/D manifest injection interface (eval/manifest_rules.py)
+      with a fake-data test; corrected the verification/demo docs and delivered
+      a working demo (run_demo.py + captured output).
+    files_changed:
+      - eval/
+      - tests/test_eval_harness.py
+      - docs/architecture/trace-matrix.md
+      - docs/architecture/invariants.md
+      - docs/req/requirements.yaml
+      - docs/req/requirements-options.yaml
+      - docs/evidence/e1/
+      - docs/ai-use-log.yaml
+    human_approved_by: "pending (reviewer k1160967796 has not approved yet)"
+    human_review_ref: "PR #6 review by k1160967796 (changes requested; re-review pending)"
+    status: draft
+
+  - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"

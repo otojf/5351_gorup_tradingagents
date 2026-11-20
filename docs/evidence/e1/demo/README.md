@@ -1,19 +1,28 @@
-# NFR-E1 Demo — Reproducible Offline Evaluation (Placeholder)
+# NFR-E1 Demo — Reproducible Offline Evaluation
 
-This folder will reproduce the NFR-E1 behaviour on deterministic local data using
+This folder reproduces the NFR-E1 behaviour on deterministic local data using
 the real `eval/` harness: no network, no external API, no LLM call.
 
-Planned contents (Phase 3/4):
+Contents:
 
 - `run_demo.py` — runs the 3-case golden set and writes the before/after table.
-- `demo-output.txt` — the verbatim captured output (3 case rows; real token
+- `demo-output.txt` — the verbatim captured output (3 case rows; a real token
   difference between the two sides).
 - `compare.csv` / `compare.md` — the generated comparison table.
 
-## How it will be reproduced
+The "before" side runs all four analysts (`market, social, news, fundamentals`);
+the "after" side drops the sentiment analyst (`market, news, fundamentals`), so
+every case shows a real token delta (−6.67% under the scripted source). Per-run
+state logs, memory logs and cache are written to a throwaway temp dir, so only
+the table and capture are kept here.
+
+## How to reproduce
 
 ```bash
 python docs/evidence/e1/demo/run_demo.py
 ```
 
-Status: PLACEHOLDER — wired up in Phase 3 (3-case compare) / Phase 4 (capture).
+Status: works as of 2026-11-20 (the three case rows and the −6.67% delta in
+`demo-output.txt` are the real, captured output of the command above). This is
+a **scripted/offline** demo: it uses scripted data and a scripted model, not
+real market data or a real LLM.
