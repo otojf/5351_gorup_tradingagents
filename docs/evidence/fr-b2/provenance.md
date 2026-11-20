@@ -48,7 +48,7 @@
 - `report/complete_report.md` / `.html`：原版完整报告（含全部分区）
 - `report/1_analysts/{market,sentiment,news,fundamentals}.md` 等原始分区
 - `market_report.md` / `sentiment_report.md` / `news_report.md` / `fundamentals_report.md` / `investment_plan.md` / `trader_investment_plan.md` / `final_trade_decision.md`：从 state 导出的单文件副本
-- `snapshot.txt`：本次分析日（2026-11-11）官方验证行情快照，**文本、67 行、可用行号定位**
+- `snapshot.txt`：本次分析日（2026-11-11）官方验证行情快照，文本、可用行号定位；按 `splitlines()` 共 68 行（末行无换行，`wc -l` 为 67）
 - `decision.txt`：`Hold`
 - `run_settings.json`：本次运行设置（provider/model/vendors，无密钥）
 - `run_log.json`：运行元数据
@@ -61,3 +61,18 @@
 2. 基线审查：通过（报告 + snapshot.txt + 真实引用对应关系已展示）。
 3. FR-B2 测试设计：按修订通过（source_id/source_line/expected_snippet + --sources；report_span 仅行号+片段；6 条混合样本；独立 claim_not_found 测试）。
 4. FR-B2 实现：**已批准**（2026-11-12，用户批准编写 fr_b2/check_citations.py）。
+
+
+## Evidence integrity registration — 2026-11-20
+
+The saved AAPL evidence from commit `f80b28d1c9a2107428b23a1c70e95f8b469793b0`
+was registered in `evidence-sha256.json` during the PR #11 review follow-up.
+The registry covers all 25 files below `evidence/AAPL_2026-11-11/`, including
+`snapshot.txt`, the complete report, the market analyst report, and run settings.
+Paths in the registry are relative to its directory.
+
+Run `python -m fr_b2.verify_evidence --manifest docs/evidence/fr-b2/evidence-sha256.json`
+from the team repository root. The offline test suite also checks the digests.
+The registration detects changes from these saved bytes. Capture provenance
+continues to rely on the earlier run records, version information and session
+transcript. The registration date is separate from the 2026-11-12 capture date.

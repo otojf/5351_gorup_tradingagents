@@ -1,8 +1,9 @@
 # FR-B2 — 报告结论引用检查（Citation Traceability Checker）
 
-检查报告中的每一条结论是否能把引用追溯到同次运行证据里的原文。引用缺失、
+检查待查清单中列出的结论及其引用，定位报告原文和已登记证据的原文行。引用缺失、
 格式错误、来源编号不存在、证据文件缺失，或引用位置在证据中找不到原文时，该结论标为
-`UNTRACEABLE`，并从 `supported` 统计中剔除。仅当全部引用都解析成功才标 `SUPPORTED`。
+`UNTRACEABLE`，并从 `supported` 统计中剔除。每条记录使用一个 `citation` 对象，
+该引用通过全部定位检查后标为 `SUPPORTED`。
 
 - 入口：`fr_b2/check_citations.py`（`python -m fr_b2.check_citations`）
 - 只依赖 Python 标准库，**离线**运行，不调用模型、不联网、不 import TradingAgents 内部模块。
@@ -12,7 +13,7 @@
 
 | 状态 | 含义 |
 |---|---|
-| `SUPPORTED` | 所有引用都解析到证据原文；计入 `supported` |
+| `SUPPORTED` | 该记录的引用解析到证据原文；计入 `supported` |
 | `UNTRACEABLE` | 任一检查失败；**不计入** `supported` |
 
 失败原因码（`reason`）：
@@ -74,7 +75,7 @@ python -m fr_b2.check_citations \
 
 ```bash
 python -m pytest fr_b2/tests -q
-# 12 passed
+# 18 passed
 ```
 
 测试覆盖：正确引用可定位原文；缺引用 / 格式错误 / 来源编号不存在 / 证据文件缺失 /
@@ -104,3 +105,43 @@ SUMMARY total=6 supported=1 untraceable=5
 
 更多细节（失败原因码、输入格式约束、复现步骤）见
 [`docs/evidence/fr-b2/RUNBOOK.md`](../docs/evidence/fr-b2/RUNBOOK.md)。
+
+## 7. 退出码与结果字段
+
+引用检查命令正常完成时返回 `0`，包括发现 `UNTRACEABLE` 的情况。
+自动化调用方应读取 JSON 的 `summary.untraceable` 和逐条 `reason` 判断检查发现。
+拒绝用 `--out` 覆盖输入文件时返回 `2`；文件读取、解析等执行错误也会产生非零退出码。
+`tests/test_review_followups.py` 对混合六条样本的退出码 `0` 有专门断言。
+
+## 8. FR-B2 的验收范围
+
+FR-B2 接收调用方提供的待查清单和引用，检查报告定位、来源登记、文件可读性、
+证据行号和原文片段。`SUPPORTED` 的含义是引用可定位。
+结论与证据之间的语义支撑性、计算正确性和模型自动生成引用需要分别评估。
+本分支以 `FR-B2` 验收；需求表中的 `FR-B1` 还有关键字段自动附加引用等交付范围，
+团队整合时需据实际完成情况更新追踪矩阵。
+
+## 9. 保存证据的 SHA-256 校验
+
+`docs/evidence/fr-b2/evidence-sha256.json` 登记了全部 25 份 AAPL 证据文件。
+路径相对于该清单所在目录。命令可从仓库根目录运行：
+
+```bash
+python -m fr_b2.verify_evidence \
+  --manifest docs/evidence/fr-b2/evidence-sha256.json
+```
+
+全部匹配返回 `0`；存在内容变化、文件缺失或不可读时返回 `1`；
+清单格式或读取错误返回 `2`。默认 `pytest -q` 和 CI 都会运行这些离线校验测试。
+
+指纹在 2026-11-20 审查补充时登记，参照提交为 `f80b28d`。
+它核验保存文件相对登记值的完整性。采集时间、来源和运行方式见 provenance，
+文件真实性还需结合这些运行记录和原始会话判断。
+
+## 10. 给集成人员的文件
+
+- `docs/evidence/fr-b2/ai-use-log.yaml` 记录原始开发与本轮审查修订的 AI 使用情况。
+- [`integration-notes.md`](../docs/evidence/fr-b2/integration-notes.md)
+  列出 CI、中央 AI-use log 和评测 manifest 的接入方法及尚需 E 同学确认的项目。
+- 代码审查可先查看 `check_citations.py`、`verify_evidence.py`、`tests/` 和 `pyproject.toml`，
+  再查看 `docs/evidence/fr-b2/` 的复现证据及 `transcripts/` 的 D5 会话。

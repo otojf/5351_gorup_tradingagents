@@ -1,0 +1,108 @@
+{
+  "algorithm": "sha256",
+  "registered_on": "2026-11-20",
+  "source_commit": "f80b28d1c9a2107428b23a1c70e95f8b469793b0",
+  "description": "Evidence integrity registry created after review. Digests detect changes relative to this registration; capture provenance is recorded separately. Paths are relative to this manifest.",
+  "files": [
+    {
+      "path": "evidence/AAPL_2026-11-11/decision.txt",
+      "sha256": "8e685d5409b3a543b1cadcc35b095d64847867539c12b21a36d55991ca0cdce1"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/final_trade_decision.md",
+      "sha256": "9e3c1b791d3cb04694021510bc778cfc78988eb3403d3746a8b1b7fed9651aa6"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/fundamentals_report.md",
+      "sha256": "e7a501c71052d47d04e41b33c9da46410de5be9af5ddda295f7d7357d1e611cb"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/investment_plan.md",
+      "sha256": "a2b53324dd0d0e281dab1dfd2065f82e6198b613655e667a19495d6304f633fa"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/market_report.md",
+      "sha256": "23bb91b86338b757d462cbd0c48f9eb84f09c33f1c26266902e05f2eca6645d3"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/news_report.md",
+      "sha256": "7901d427615dd80d8cc034f161b167ecad7c944d874c0eabb31a5a19a16dbfa8"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/1_analysts/fundamentals.md",
+      "sha256": "e7a501c71052d47d04e41b33c9da46410de5be9af5ddda295f7d7357d1e611cb"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/1_analysts/market.md",
+      "sha256": "23bb91b86338b757d462cbd0c48f9eb84f09c33f1c26266902e05f2eca6645d3"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/1_analysts/news.md",
+      "sha256": "7901d427615dd80d8cc034f161b167ecad7c944d874c0eabb31a5a19a16dbfa8"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/1_analysts/sentiment.md",
+      "sha256": "0eb70a26bac62c06781852f71dfd39734b202ea9ec5648fc66b2d53fd041a145"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/2_research/bear.md",
+      "sha256": "00e1917cfee6f8d09d930e5aeda30b69e470dc6eedb5a1aa08c7e778a741df29"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/2_research/bull.md",
+      "sha256": "3d05c5890da1642be4b653b32a29995b467622c95d2774881ebf4d19305e5ca1"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/2_research/manager.md",
+      "sha256": "a2b53324dd0d0e281dab1dfd2065f82e6198b613655e667a19495d6304f633fa"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/3_trading/trader.md",
+      "sha256": "06871b4d5ab553097d57e1075b6661651a703c9998bffcf7507446068f6e1edc"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/4_risk/aggressive.md",
+      "sha256": "9e6bc0b4ac99ee8c74abe7cd38f715d487fe2832054c4fcf93f451685461f49b"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/4_risk/conservative.md",
+      "sha256": "bec3e6087ec785d5eea9bd22c1100d43ec0d2a3021b2d632b3c2d5b1dda5e3f1"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/4_risk/neutral.md",
+      "sha256": "af9e957437b73d0bfc480ff68d2d5f4cdeeeefa833f2a20af58f3bed0e2d0d2e"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/5_portfolio/decision.md",
+      "sha256": "9e3c1b791d3cb04694021510bc778cfc78988eb3403d3746a8b1b7fed9651aa6"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/complete_report.html",
+      "sha256": "7984b062ad40e7e1da61f8d11c63c2518573d8c0696921bcb6279a9024ebbe5c"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/report/complete_report.md",
+      "sha256": "0da2b32644702db43fce50c21588a3b92bf51474092f17fed8dca60af768e071"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/run_log.json",
+      "sha256": "6188d2e2429dab62cc2b92e2fd4b91fcc7fb70342126537d1bc79a10f93376c6"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/run_settings.json",
+      "sha256": "289c26eaab50e43ae2098ff2bb356f43995297c842b7e4999a14a0cc89284292"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/sentiment_report.md",
+      "sha256": "0eb70a26bac62c06781852f71dfd39734b202ea9ec5648fc66b2d53fd041a145"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/snapshot.txt",
+      "sha256": "ce099e1e6b9b197052e38c95d39126eeabdb71b040b8a81195521a003c85e25f"
+    },
+    {
+      "path": "evidence/AAPL_2026-11-11/trader_investment_plan.md",
+      "sha256": "06871b4d5ab553097d57e1075b6661651a703c9998bffcf7507446068f6e1edc"
+    }
+  ]
+}

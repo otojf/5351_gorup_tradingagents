@@ -64,3 +64,30 @@ AAPL on 2026-11-11 (deepseek, `CS5351/DeepSeek-V4-Flash`) on the CityU gateway.
 The `snapshot.txt` was obtained independently via the official
 `build_verified_market_snapshot("AAPL","2026-11-11")` before the analysis, as
 check evidence for the same run (`docs/evidence/fr-b2/evidence/AAPL_2026-11-11/`).
+
+
+## PR #11 review follow-up — 2026-11-20
+
+The author approved the follow-up after receiving the review document from
+`k1160967796`. The review tests were added first (commit `04ad26f`). Before
+implementation, five integrity tests failed and the existing exit-code behaviour
+test passed. This round then added the verifier and the 25-file registry.
+
+| Check | Result |
+|---|---|
+| `python -m pytest fr_b2/tests -q` | 18 passed |
+| Default `python -m pytest -q` with FR-B2 collection enabled | 1,430 passed; 1 skipped; 1 deselected; 100 subtests passed |
+| `ruff check .` | Passed |
+| `python -m fr_b2.verify_evidence --manifest docs/evidence/fr-b2/evidence-sha256.json` | 25/25 files matched |
+| Temporary evidence modified or removed | MISMATCH or MISSING detected |
+| Integrity CLI on matching / changed / invalid manifest | Exit 0 / 1 / 2 |
+| Original six-case citation CLI | total=6, supported=1, untraceable=5; exit 0 |
+
+The citation command's exit code 0 records successful completion, including
+UNTRACEABLE findings. Callers use the result JSON to inspect those findings.
+The ambiguous conditional return was simplified to `return 0`.
+
+The registry records integrity as of 2026-11-20, relative to the stored artifacts
+in `f80b28d`. The capture description remains in provenance. No evidence file
+was regenerated. The README and integration notes state the FR-B2 scope and
+identify the E-owner central log / manifest integration work.
