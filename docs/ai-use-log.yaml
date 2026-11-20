@@ -334,6 +334,28 @@ entries:
       review the current-tree adaptation before merge.
     status: draft
 
+  - commit_range: "39624b8..integration/d8-structure"
+    date: "2026-11-20"
+    owner: E
+    agent: "not recorded"
+    session_ref: >-
+      restored from 7f9c3ec (compliance/structure); authoring session not recorded
+    session_id: null
+    summary: >-
+      Restore the versioned runtime prompt records (Section 5 / D9 structure)
+      prompts/prompt_v1.0.yaml and prompts/prompt_v1.1.yaml from commit 7f9c3ec
+      of the compliance/structure history. Paths inside v1.0 adapted to the D8
+      src/ layout (tradingagents/... -> src/tradingagents/...); v1.1 needed no
+      path change. Version content and candidate status are unchanged.
+    files_changed:
+      - prompts/
+      - docs/ai-use-log.yaml
+    human_approved_by: "pending (owner to confirm before merge)"
+    human_review_ref: >-
+      Restored verbatim from 7f9c3ec; authoring session not recorded. Owner to
+      confirm the D8 path adaptation.
+    status: draft
+
 
 notes: >-
   Merged integration log: entries from owners E (NFR-E1), D (FR-D2) and C

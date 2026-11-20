@@ -1,0 +1,61 @@
+# Versioned runtime prompts — v1.1 (candidate)
+#
+# IMPORTANT: like v1.0, this is a versioned record, not a runtime loader.
+# Production prompts live in the agent modules. This file records a *proposed*
+# v1.1 change so it can be reviewed before any code change (see Prompt.md
+# plan-first rule and docs/code-governance/verification-constraints.md).
+#
+# Relationship to v1.0: inherits v1.0's context layers and fixed labels; the
+# deltas below are candidates, NOT yet applied to code.
+
+schema_version: "1.0"
+prompt_version: "1.1"
+date: "2026-11-11"
+status: candidate
+loaded_at_runtime: false
+supersedes: "1.0"
+
+# Proposed deltas (TODO: the team approves/rejects each before implementation).
+changes:
+  - id: P11-01
+    area: structured-output
+    proposal: >-
+      Make the final decision path prefer function-calling structured output and
+      fall back to free text only when the provider lacks it (aligns with FR-D1,
+      owner D). Marked DEGRADED when falling back (owner D's INV-D1).
+    status: TODO
+    owner: D
+  - id: P11-02
+    area: evidence
+    proposal: >-
+      Ask decision agents to attach an EvidenceRef per key field (rating reason,
+      entry, stop, target, size) (aligns with FR-B1, owner B). Unsupported claims
+      marked UNTRACEABLE.
+    status: TODO
+    owner: B
+  - id: P11-03
+    area: token-budget
+    proposal: >-
+      State the compaction threshold explicitly and the re-injection of identity,
+      standing constraints, and current task after compaction.
+    status: TODO
+    owner: C
+
+context_layers:  # inherited from v1.0
+  - identity
+  - standing_constraints
+  - retrieved_knowledge
+  - conversation_history
+  - resumable_state
+  - current_task
+
+fixed_labels:
+  - "**Rating**:"
+  - "FINAL TRANSACTION PROPOSAL:"
+
+# Prompt-change gate: because prompts are versioned here, any change to a
+# candidate that reaches code must update docs/ai-use-log.yaml (gate 6) and pass
+# gate 4 (semantic eval) before merge.
+verification:
+  gate: "gate-4-semantic-eval + gate-6-ai-use-log"
+  note: "Prompt changes that alter model behavior must replay the golden set."
