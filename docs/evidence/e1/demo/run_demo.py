@@ -15,8 +15,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[3]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+_SRC = REPO_ROOT / "src"
+for _p in (str(REPO_ROOT), str(_SRC)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from eval.compare import compare  # noqa: E402
 from eval.golden import GOLDEN_SET  # noqa: E402

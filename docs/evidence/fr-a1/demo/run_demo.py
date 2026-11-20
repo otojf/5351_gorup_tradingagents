@@ -26,10 +26,12 @@ import tempfile
 from pathlib import Path
 
 # Make the repository root importable when this file is run as a plain script, so
-# the full-graph section can reuse ``tests.test_graph_end_to_end``.
+# the full-graph section can reuse ``test.offline.test_graph_end_to_end``.
 _REPO_ROOT = Path(__file__).resolve().parents[4]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_SRC = _REPO_ROOT / "src"
+for _p in (str(_REPO_ROOT), str(_SRC)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from tradingagents.agents import schemas  # noqa: E402
 from tradingagents.risk_gate import adapter as adapter_mod  # noqa: E402
@@ -262,7 +264,7 @@ def full_graph_demo() -> bool:
     try:
         import pytest
 
-        import tests.test_graph_end_to_end as e2e
+        import test.offline.test_graph_end_to_end as e2e
         from tradingagents.agents import schemas as s
 
         structured = dict(e2e.STRUCTURED)
