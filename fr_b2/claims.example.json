@@ -1,0 +1,78 @@
+{
+  "_comment": "FR-B2 claims list. The report path is supplied via --report, so report_span only carries the line number and the exact text fragment to look for. Each citation uses source_id (key in sources.json), source_line (1-based int) and expected_snippet (substring the cited line must contain). Expected batch result: total=6, supported=1, untraceable=5.",
+  "claims": [
+    {
+      "id": "c1_valid",
+      "description": "Positive: market.md line 5 states AAPL closed at 355.63 on 2026-11-11; cited to snapshot.txt line 66.",
+      "report_span": {
+        "line": 5,
+        "snippet": "AAPL closed at **355.63** on 2026-11-11"
+      },
+      "citation": {
+        "source_id": "S1",
+        "source_line": 66,
+        "expected_snippet": "| 2026-11-11 | 355.63 |"
+      }
+    },
+    {
+      "id": "c2_missing_citation",
+      "description": "Negative: same real claim, but no citation at all.",
+      "report_span": {
+        "line": 5,
+        "snippet": "AAPL closed at **355.63** on 2026-11-11"
+      }
+    },
+    {
+      "id": "c3_malformed_citation",
+      "description": "Negative: citation is malformed (source_line is a string, not an integer).",
+      "report_span": {
+        "line": 5,
+        "snippet": "AAPL closed at **355.63** on 2026-11-11"
+      },
+      "citation": {
+        "source_id": "S1",
+        "source_line": "Sixty-six",
+        "expected_snippet": "| 2026-11-11 | 355.63 |"
+      }
+    },
+    {
+      "id": "c4_unknown_source",
+      "description": "Negative: source_id S999 is not present in the source table.",
+      "report_span": {
+        "line": 5,
+        "snippet": "AAPL closed at **355.63** on 2026-11-11"
+      },
+      "citation": {
+        "source_id": "S999",
+        "source_line": 66,
+        "expected_snippet": "| 2026-11-11 | 355.63 |"
+      }
+    },
+    {
+      "id": "c5_missing_evidence",
+      "description": "Negative: source S2 points at a file that does not exist. The real snapshot S1 stays readable for the positive sample.",
+      "report_span": {
+        "line": 5,
+        "snippet": "AAPL closed at **355.63** on 2026-11-11"
+      },
+      "citation": {
+        "source_id": "S2",
+        "source_line": 66,
+        "expected_snippet": "| 2026-11-11 | 355.63 |"
+      }
+    },
+    {
+      "id": "c6_invalid_locator",
+      "description": "Negative: source_line 999 is beyond the 67-line snapshot, so the locator is invalid.",
+      "report_span": {
+        "line": 5,
+        "snippet": "AAPL closed at **355.63** on 2026-11-11"
+      },
+      "citation": {
+        "source_id": "S1",
+        "source_line": 999,
+        "expected_snippet": "| 2026-11-11 | 355.63 |"
+      }
+    }
+  ]
+}

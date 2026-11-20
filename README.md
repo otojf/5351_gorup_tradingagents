@@ -9,3 +9,9 @@
 | `docs/req/requirements-options.yaml` | 35 条候选需求，供组员挑选 |
 
 安装：`pip install -e .`
+
+## 功能开发分支
+
+| 需求 | 分支 | 入口 |
+|---|---|---|
+| FR-B2 报告结论引用检查 | `feat/fr-b2-conclusion` | [`fr_b2/README.md`](fr_b2/README.md) |
