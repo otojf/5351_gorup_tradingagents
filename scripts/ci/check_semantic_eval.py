@@ -24,7 +24,7 @@ import sys
 
 
 def main() -> int:
-    cmd = [sys.executable, "-m", "pytest", "tests/test_eval_harness.py", "-q"]
+    cmd = [sys.executable, "-m", "pytest", "test/offline/test_eval_harness.py", "-q"]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     output = (proc.stdout + proc.stderr).strip()
     if proc.returncode != 0:

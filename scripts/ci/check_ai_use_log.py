@@ -33,6 +33,8 @@ DEFAULT_LOG = Path("docs/ai-use-log.yaml")
 
 # A change is "code or prompt" if it touches one of these prefixes.
 _CODE_PROMPT_PREFIXES = (
+    "src/",
+    "test/",
     "tradingagents/",
     "cli/",
     "eval/",
