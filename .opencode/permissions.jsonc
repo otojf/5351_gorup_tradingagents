@@ -1,0 +1,65 @@
+// Project-level permission model (D3) for the AI coding agent.
+// Default: no read, no write. Every path is explicitly whitelisted.
+// Human-readable rationale: docs/architecture/permission-model.md.
+{
+  // Applies to the coding agent ("builder") unless a role overrides it.
+  "default": { "read": false, "write": false },
+
+  // Paths the agent may read but NOT write (human-only / reference).
+  "readOnly": [
+    "AGENTS.md",
+    "Prompt.md",
+    "architecture-blueprint.md",
+    ".opencode/rules.md",
+    ".agent/rules.md",
+    ".env*",
+    "CHANGELOG.md",
+    "LICENSE",
+    "assets/**",
+    "prompts/**"
+  ],
+
+  // Paths the agent may read and write (the build surface).
+  "readWrite": [
+    "tradingagents/**",
+    "cli/**",
+    "tests/**",
+    "eval/**",
+    "scripts/ci/**",
+    "docs/**",
+    "transcripts/**"
+  ],
+
+  // Frozen: never read, never write. Secrets/credentials.
+  "deny": [
+    "**/.env",
+    "**/.env.*",
+    "**/secrets/**",
+    "**/*.pem",
+    "**/*.key"
+  ],
+
+  // Guard rules enforced regardless of role.
+  "guard": {
+    "humanOnly": [
+      "AGENTS.md",
+      "Prompt.md",
+      ".opencode/rules.md",
+      ".agent/rules.md",
+      "architecture-blueprint.md"
+    ],
+    "requiresArchitectureDecision": [
+      "tradingagents/agents/rating.py",
+      "tradingagents/graph/**",
+      ".github/workflows/**"
+    ],
+    "requiresHumanReview": ["safety-critical"]
+  },
+
+  // Role overrides (see permission-model.md).
+  "roles": {
+    "planner": { "write": [] },
+    "builder": { "write": ["readWrite", "docs/**"] },
+    "verifier": { "write": [] }
+  }
+}

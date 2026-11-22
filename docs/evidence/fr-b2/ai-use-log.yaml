@@ -1,0 +1,57 @@
+schema_version: "1.0"
+requirement: FR-B2
+description: >-
+  FR-B2 entries prepared for Owner E to append to docs/ai-use-log.yaml during
+  integration, preserving the entries already present on the governance branch.
+entries:
+  - commit_range: "46bde74..04d7d2c"
+    date: "2026-11-12"
+    owner: B
+    agent: "OpenCode (CityU DeepSeek)"
+    session_id: "ses_e30b2ced0ffeicCgqbTlJgUKg6"
+    session_ref: "transcripts/60245953-WANG Yixuan.md"
+    summary: >-
+      Reproduced TradingAgents v0.7.1, built the offline FR-B2 checker and
+      acceptance tests, fixed review findings, and migrated the deliverables
+      to the team feature branch. The annotated session was added on 2026-11-17.
+    files_changed:
+      - fr_b2/
+      - scripts/reproduce_aapl_2026-11-11.py
+      - docs/evidence/fr-b2/
+      - README.md
+      - transcripts/60245953-WANG Yixuan.md
+    human_approved_by: "WANG Yixuan (60245953)"
+    human_review_ref: "transcripts/60245953-WANG Yixuan.md (messages 6, 38, 50, 60, 75, 95)"
+    status: recorded
+
+  - commit_range: "04d7d2c..f80b28d"
+    date: "2026-11-19"
+    owner: B
+    agent: Codex
+    session_ref: "PR #11 validation summary"
+    summary: >-
+      Sorted imports in the AAPL reproduction script to resolve Ruff I001,
+      ran Ruff and all original plus FR-B2 offline tests, and updated PR #11.
+    files_changed:
+      - scripts/reproduce_aapl_2026-11-11.py
+    human_approved_by: "WANG Yixuan (60245953)"
+    human_review_ref: "Author's Ruff repair request in the Codex conversation on 2026-11-19"
+    status: recorded
+
+  - commit_range: "f80b28d..feat/fr-b2-conclusion"
+    date: "2026-11-20"
+    owner: B
+    agent: Codex
+    session_ref: "https://github.com/otojf/5351_gorup_tradingagents/pull/11"
+    summary: >-
+      Addressed the review with saved-evidence SHA-256 registration and offline
+      verification, documented citation-check exit codes and scope, enabled
+      default pytest collection of FR-B2 tests, and prepared integration notes.
+      Review tests were committed before implementation.
+    files_changed:
+      - fr_b2/
+      - pyproject.toml
+      - docs/evidence/fr-b2/
+    human_approved_by: "WANG Yixuan (60245953)"
+    human_review_ref: "Author approved the review follow-up in the Codex conversation on 2026-11-20"
+    status: recorded
