@@ -42,7 +42,7 @@ requirements:
       test: "test_invariant_sweep_never_approves_violations"
       monitor: "risk_verdict_count"
       demo: "注入坏单，展示被拒绝、规则 ID 与审计记录"
-    status: draft
+    status: implemented
 
   # ---------------------------------------------------------------------------
   # B. 结论可信（Owner B）
@@ -145,7 +145,7 @@ requirements:
       test: "test_degraded_marker"
       monitor: "degradation_count"
       demo: "基线 2 次降级、工具计数 0；增强版 0 次降级、计数与实际一致"
-    status: draft
+    status: implemented
 
   # ---------------------------------------------------------------------------
   # E. 整体可验证（Owner E）
@@ -234,4 +234,4 @@ requirements:
       test: "test_suite_runs_three_times_with_stable_rating_reports_and_tokens"
       monitor: "eval_pass_rate"
       demo: "同案例 before/after 对比表；故意坏 PR 被 gate 拦下"
-    status: draft
+    status: partial
