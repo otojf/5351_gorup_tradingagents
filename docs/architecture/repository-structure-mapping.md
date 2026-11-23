@@ -25,7 +25,7 @@ below documents the real locations (no longer a mapping away from spec paths).
 | `.opencode/`, `.agent/` | `.opencode/`, `.agent/` | D3 permissions + rules. |
 | `.github/workflows/ci.yml` | `.github/workflows/ci.yml` | D4/D7 six blocking gates. |
 | `prompts/prompt_v1.*.yaml` | *(not present)* | Versioned runtime prompts not yet added; runtime prompts are inlined in agent modules. |
-| `transcripts/<student-id>-<student-name>.md` | `transcripts/` | D5: E, B2, C2 present; A1/governance not recorded (see AI-use log). |
+| `transcripts/<student-id>-<student-name>.md` | `transcripts/` | D5: annotated transcripts for E1, B2, C2, D2, and A1. D2 covers the FR-D2 reimplementation session (PR #17); A1 covers the FR-A1 decision-safety session (PR #15). All five are present on `main`. |
 
 ## Why the earlier "mapping-only" decision changed
 

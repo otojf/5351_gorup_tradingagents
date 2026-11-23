@@ -139,9 +139,10 @@ entries:
     owner: D
     agent: "opencode (cityu/CS5351/DeepSeek-V4-Flash)"
     session_ref: >-
-      Local session on branch feat/fr-d2-degraded (transcript export pending;
-      session reconstructed after a host crash and a discarded earlier
-      worktree, restarted from main per the owner's instruction).
+      transcripts/60263031-LI Jin.md (177 messages; human intervention index).
+      The session was reconstructed after a host crash and a discarded earlier
+      worktree, restarted from main per the owner's instruction.
+    session_id: "ses_e11227c6dffe8s0Hv4LeTwWUug"
     summary: >-
       FR-D2 / INV-D1 visible structured-output degradation. A structured call
       that yields no parsed result or fails validation is now attempted once
@@ -172,11 +173,13 @@ entries:
       - docs/req/requirements.yaml
       - docs/req/requirements-options.yaml
       - docs/ai-use-log.yaml
-    human_approved_by: "PENDING (owner D to confirm before merge)"
+    human_approved_by: "LI Jin (60263031)"
     human_review_ref: >-
-      Owner approved the plan in-session before implementation (retry-twice
-      semantics, section-level warnings, markdown + HTML coverage) and
-      explicitly authorised local-only work with no push to GitHub.
+      transcripts/60263031-LI Jin.md, Human intervention index (msg 050
+      authorised implementation of the retry-twice semantics, section-level
+      warnings, and markdown + HTML coverage; msg 115 requested the AI-use log
+      update). The owner explicitly authorised local-only work with no push to
+      GitHub in that session.
     status: draft
 
   - commit_range: "46bde74..0e948f2"
