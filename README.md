@@ -1,5 +1,24 @@
 # CS5351 Group Project — TradingAgents
 
+## Purpose and architecture
+
+TradingAgents is a multi-agent LLM system for financial trading research. Given
+a ticker and a trade date, it gathers market, sentiment, news and fundamentals
+evidence, runs a bull/bear research debate, lets a trader propose a decision,
+applies risk management, and publishes a five-tier rating (Buy/Overweight/Hold/
+Underweight/Sell) with a final transaction proposal.
+
+The runtime is a LangGraph workflow: analyst nodes produce reports, researcher
+nodes debate, the trader produces a structured proposal, risk-management nodes
+review it, and the portfolio manager emits the final decision. This project
+extends that baseline with a deterministic risk gate (FR-A1), conclusion citation
+checking (FR-B2), FRED vendor-skip handling (FR-C2), structured-output
+retry/DEGRADED handling (FR-D2), a reproducible offline evaluation harness with
+six blocking CI gates (NFR-E1), and the required D8 `src/` + `test/offline|live`
+repository layout.
+
+GitHub repository: <https://github.com/otojf/5351_gorup_tradingagents>
+
 这个仓库目前包含：
 
 | 路径 | 内容 |
@@ -26,8 +45,9 @@ python -m pytest test/offline test/live
 ## Blocking gates (D7)
 
 Six blocking gates are implemented under `scripts/ci/` and wired into
-`.github/workflows/ci.yml`. PR #6 runs all nine required checks; branch
-protection (9 checks + one approving review) is configured on `main`.
+`.github/workflows/ci.yml`. The final integration PR #14 ran all nine required
+checks; branch protection (9 checks + one approving review) is configured on
+`main`.
 
 | # | Gate | Script / command | What it checks | Known gaps (stated, not faked) |
 |---|---|---|---|---|
