@@ -97,3 +97,29 @@ not given an invented verdict.
   continue instead of silently degrading.
 - **Note:** merged through the integration path without a submitted review.
   No verdict is invented here; this gap is recorded honestly.
+
+## PR #16 — docs: D4 review memo, README purpose/architecture, D1 statuses
+
+- **Reviewer:** degna9838-pixel
+- **Date:** 2026-11-23
+- **Verdict:** APPROVE
+- **Change summary:** filled the D4 review memo with the real review records for
+  PRs #6/#9/#10/#11/#12/#13/#14, added the README purpose/architecture sections
+  and GitHub URL, and updated the D1 requirement statuses.
+- **Areas checked:** reviewer/verdict entries matched the submitted GitHub
+  reviews and the referenced integration merges; no invented verdicts; document
+  consistency; no secrets.
+- **Resolution:** merged to `main` as `b63c168` (2026-11-23).
+
+## PR #17 — docs(d5): Jin Li FR-D2 reimplementation transcript
+
+- **Reviewer:** otojf
+- **Date:** 2026-11-23
+- **Verdict:** APPROVE
+- **Change summary:** added the annotated D5 transcript for Jin Li (60263031)
+  covering the FR-D2 reimplementation session.
+- **Areas checked:** D5 format (session header, session ID, 177 messages, 6-item
+  human intervention index with rationale); content alignment with the FR-D2
+  retry/degradation design; security (no secrets); operational metadata (the
+  AI-use log now points at the transcript, PR #18).
+- **Resolution:** merged to `main` as `6e7d12a` (2026-11-23).
