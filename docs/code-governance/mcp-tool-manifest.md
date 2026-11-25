@@ -28,8 +28,11 @@ the agent is permitted to use and the role boundaries.
 See `.opencode/permissions.jsonc` for the machine-readable version. Default is no
 read, no write; every path is explicitly whitelisted.
 
-## 4. Status / TODO
+## 4. Status
 
-- No MCP server is registered yet. TODO (team): if an MCP server is introduced,
-  list its tools, scopes, and the roles allowed to call each tool here, and
-  mirror the rules in `.opencode/permissions.jsonc`.
+- No dedicated MCP server is used. The tool surface above is the OpenCode
+  built-in tool set; permissions and guard rules live in
+  `.opencode/permissions.jsonc` and are checked by
+  `scripts/ci/check_permissions.py` in gate 2. If an MCP server is introduced,
+  list its tools, scopes, and allowed roles here and mirror them in the
+  permission model.

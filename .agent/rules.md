@@ -17,8 +17,8 @@ freshness.
 
 - No new third-party dependency without team approval and a stated reason; add it
   to `pyproject.toml` (dev extras for tooling) and mention it in the review memo.
-- Network access only through `tradingagents/dataflows/`; LLM providers only
-  through `tradingagents/llm_clients/`.
+- Network access only through `src/tradingagents/dataflows/`; LLM providers only
+  through `src/tradingagents/llm_clients/`.
 - Tests are offline by default; anything requiring API access uses the
   `integration` marker and is excluded from the default run.
 

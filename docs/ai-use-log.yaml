@@ -20,12 +20,12 @@ entries:
       in the trace matrix / registry with real tests; made prompt_snapshot a real
       sha256 (prompt_hash) plus a separate prompt_source_id label; added NFR-E1
       metric tests (token <=5%, 0 network via patched socket/urlopen, offline
-      <=10 min); added the A/B/D manifest injection interface (eval/manifest_rules.py)
+      <=10 min); added the A/B/D manifest injection interface (src/eval/manifest_rules.py)
       with a fake-data test; corrected the verification/demo docs and delivered
       a working demo (run_demo.py + captured output).
     files_changed:
-      - eval/
-      - tests/test_eval_harness.py
+      - src/eval/
+      - test/offline/test_eval_harness.py
       - docs/architecture/trace-matrix.md
       - docs/architecture/invariants.md
       - docs/req/requirements.yaml
@@ -33,8 +33,8 @@ entries:
       - docs/evidence/e1/
       - docs/ai-use-log.yaml
     human_approved_by: "HUANG SIYING (60572233); rationale drafts reviewed 2026-11-20"
-    human_review_ref: "Student reviewed rationale drafts on 2026-11-20; PR #6 re-review by k1160967796 pending"
-    status: draft
+    human_review_ref: "Student reviewed rationale drafts on 2026-11-20; PR #6 re-review by k1160967796 completed 2026-11-19; follow-up merged in PR #14"
+    status: merged
 
   - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
@@ -45,22 +45,22 @@ entries:
     summary: >-
       Built the NFR-E1 offline evaluation harness: slices 1-3 (golden set,
       offline runner, run manifest, run_suite isolation, before/after compare)
-      and tests/test_eval_harness.py, plus the annotated session transcript.
+      and test/offline/test_eval_harness.py, plus the annotated session transcript.
     files_changed:
-      - eval/
-      - tests/test_eval_harness.py
+      - src/eval/
+      - test/offline/test_eval_harness.py
       - transcripts/60572233-HUANG-SIYING.md
     human_approved_by: "HUANG SIYING (60572233)"
     human_review_ref: "transcripts/60572233-HUANG-SIYING.md (Intervention index)"
-    status: draft
+    status: merged
 
   - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
     session_ref: >-
-      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
-      exported to transcripts/)
+      session ses_e34f0999dffe323Un98HwNnxnO (not exported to transcripts/;
+      the D5 transcript is transcripts/60572233-HUANG-SIYING.md)
     session_id: "ses_e34f0999dffe323Un98HwNnxnO"
     summary: >-
       Requirements/architecture artifacts for NFR-E1: nested registry entries
@@ -78,16 +78,16 @@ entries:
       - docs/ai-use-log.yaml
       - pyproject.toml
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
-    status: draft
+    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (not exported)"
+    status: merged
 
   - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
     session_ref: >-
-      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
-      exported to transcripts/)
+      session ses_e34f0999dffe323Un98HwNnxnO (not exported to transcripts/;
+      the D5 transcript is transcripts/60572233-HUANG-SIYING.md)
     session_id: "ses_e34f0999dffe323Un98HwNnxnO"
     summary: >-
       Phase 3 eval test fixes: runner records tool-call args from AIMessages into
@@ -99,31 +99,31 @@ entries:
       included "requested" events); added tool_call_requests_total for the
       request count; compare table now reports 12.
     files_changed:
-      - eval/runner.py
-      - tests/test_eval_harness.py
+      - src/eval/runner.py
+      - test/offline/test_eval_harness.py
       - docs/req/requirements.yaml
       - docs/architecture/trace-matrix.md
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
-    status: draft
+    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (not exported)"
+    status: merged
 
   - commit_range: "46bde74..feat/nfr-e1-eval"
     date: "2026-11-11"
     owner: E
     agent: "opencode (cityucs/CS5351/DeepSeek-V4-Flash)"
     session_ref: >-
-      session ses_e34f0999dffe323Un98HwNnxnO (transcript export pending; not yet
-      exported to transcripts/)
+      session ses_e34f0999dffe323Un98HwNnxnO (not exported to transcripts/;
+      the D5 transcript is transcripts/60572233-HUANG-SIYING.md)
     session_id: "ses_e34f0999dffe323Un98HwNnxnO"
     summary: >-
       Phase 4 CI gates: six local gate scripts under scripts/ci/ with bad-input
-      self-tests (tests/test_ci_gates.py); wired the six gate jobs into
+      self-tests (test/offline/test_ci_gates.py); wired the six gate jobs into
       .github/workflows/ci.yml; added PyYAML to dev extras; documented the gates
       and evidence. Branch protection is configured (9 checks + one review);
       temporary bad PR #7 was blocked by gate-3 and was closed/deleted.
     files_changed:
       - scripts/ci/
-      - tests/test_ci_gates.py
+      - test/offline/test_ci_gates.py
       - .github/workflows/ci.yml
       - README.md
       - pyproject.toml
@@ -131,8 +131,8 @@ entries:
       - docs/evidence/e1/verification/
       - docs/ai-use-log.yaml
     human_approved_by: "HUANG SIYING (60572233)"
-    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (export pending)"
-    status: draft
+    human_review_ref: "session ses_e34f0999dffe323Un98HwNnxnO (not exported)"
+    status: merged
 
   - commit_range: "46bde74..feat/fr-d2-degraded"
     date: "2026-11-18"
@@ -156,20 +156,20 @@ entries:
       visible warning so a reader does not trust a fallback run as a normal
       one. Requirements FR-D2 now specify a two-retry budget (three attempts)
       in both requirement registries. Tests were written first in
-      tests/test_structured_degradation.py (23 tests, including
+      test/offline/test_structured_degradation.py (23 tests, including
       test_invariant_no_silent_degradation). FR-D3 (tool-call counting) and
       FR-D4 (exit-status propagation) are explicitly out of scope.
     files_changed:
-      - tradingagents/agents/structured.py
-      - tradingagents/agents/state.py
-      - tradingagents/graph/propagation.py
-      - tradingagents/agents/managers/portfolio_manager.py
-      - tradingagents/agents/managers/research_manager.py
-      - tradingagents/agents/trader/trader.py
-      - tradingagents/agents/analysts/sentiment_analyst.py
-      - tradingagents/reporting.py
-      - tradingagents/report_html.py
-      - tests/test_structured_degradation.py
+      - src/tradingagents/agents/structured.py
+      - src/tradingagents/agents/state.py
+      - src/tradingagents/graph/propagation.py
+      - src/tradingagents/agents/managers/portfolio_manager.py
+      - src/tradingagents/agents/managers/research_manager.py
+      - src/tradingagents/agents/trader/trader.py
+      - src/tradingagents/agents/analysts/sentiment_analyst.py
+      - src/tradingagents/reporting.py
+      - src/tradingagents/report_html.py
+      - test/offline/test_structured_degradation.py
       - docs/req/requirements.yaml
       - docs/req/requirements-options.yaml
       - docs/ai-use-log.yaml
@@ -180,7 +180,7 @@ entries:
       warnings, and markdown + HTML coverage; msg 115 requested the AI-use log
       update). The owner explicitly authorised local-only work with no push to
       GitHub in that session.
-    status: draft
+    status: merged
 
   - commit_range: "46bde74..0e948f2"
     date: "2026-11-18"
@@ -190,26 +190,26 @@ entries:
     session_id: "ses_e16f9644effeypE3kMR6Y2qEIj"
     summary: "实现 FR-C2 运行级缺凭据跳过、单次日志、并发协调及运行隔离，并添加验收和 checkpoint 探针测试。"
     files_changed:
-      - "tradingagents/dataflows/vendor_skip.py"
-      - "tradingagents/dataflows/vendors/fred.py"
-      - "tradingagents/dataflows/router.py"
-      - "tradingagents/agents/tools.py"
-      - "tradingagents/graph/trading_graph.py"
-      - "tests/test_fr_c2_acceptance.py"
-      - "tests/test_fr_c2_paths.py"
-      - "tests/test_fr_c2_probe.py"
+      - "src/tradingagents/dataflows/vendor_skip.py"
+      - "src/tradingagents/dataflows/vendors/fred.py"
+      - "src/tradingagents/dataflows/router.py"
+      - "src/tradingagents/agents/tools.py"
+      - "src/tradingagents/graph/trading_graph.py"
+      - "test/offline/test_fr_c2_acceptance.py"
+      - "test/offline/test_fr_c2_paths.py"
+      - "test/offline/test_fr_c2_probe.py"
     human_review_ref: "transcripts/60662195-RenLongteng.md#用户干预索引"
-    status: "locally_committed_pending_team_review"
+    status: merged
 
   - commit_range: "46bde74..integration/team-features"
     date: "2026-11-11"
     owner: A
     agent: "not recorded"
     session_ref: >-
-      not recorded — no annotated D5 transcript exists for the FR-A1 session.
-      The FR-A1 evidence explicitly required that no synthetic transcript be
-      fabricated (docs/evidence/fr-a1/human-review-milestones.md, section 7).
-    session_id: null
+      transcripts/60868911-ZHANG Yating.md (main FR-A1 session; 537 messages,
+      19 annotated interventions; PR #15) and
+      docs/evidence/fr-a1/human-review-milestones.md.
+    session_id: "ses_e370b0736ffeCmg7sOktmZVaEc"
     summary: >-
       FR-A1 deterministic, offline, auditable risk gate: a versioned-policy
       evaluator returning APPROVED/REJECTED/NEEDS_REVIEW (R1-R6), the
@@ -217,15 +217,15 @@ entries:
       test suites (core, safety-edge, adapter, audit) plus the end-to-end
       graph test updates.
     files_changed:
-      - tradingagents/risk_gate/
-      - tests/risk_gate/
-      - tests/test_graph_end_to_end.py
-    human_approved_by: "pending (owner A to confirm; approvals referenced in docs/evidence/fr-a1/human-review-milestones.md)"
+      - src/tradingagents/risk_gate/
+      - test/offline/risk_gate/
+      - test/offline/test_graph_end_to_end.py
+    human_approved_by: "ZHANG Yating (60868911); approvals in human-review-milestones.md"
     human_review_ref: >-
       docs/evidence/fr-a1/contribution-summary.md and
       human-review-milestones.md (gate-by-gate approvals; session id not
       recorded)
-    status: draft
+    status: merged
 
   - commit_range: "46bde74..integration/team-features"
     date: "2026-11-12"
@@ -234,15 +234,15 @@ entries:
     session_ref: "transcripts/60245953-WANG Yixuan.md"
     session_id: "ses_e30b2ced0ffeicCgqbTlJgUKg6"
     summary: >-
-      FR-B2 report conclusion citation checker (fr_b2/check_citations.py, offline
+      FR-B2 report conclusion citation checker (src/fr_b2/check_citations.py, offline
       stdlib) with its sources table, sample claims, and 12 offline tests, plus
       the AAPL 2026-11-11 reproduction script and captured evidence.
     files_changed:
       - scripts/reproduce_aapl_2026-11-11.py
-      - fr_b2/
+      - src/fr_b2/
     human_approved_by: "WANG Yixuan (60245953)"
     human_review_ref: "transcripts/60245953-WANG Yixuan.md (Intervention index)"
-    status: draft
+    status: merged
 
   - commit_range: "46bde74..integration/team-features"
     date: "2026-11-11"
@@ -266,11 +266,11 @@ entries:
       - .agent/
       - .opencode/
       - docs/code-governance/
-    human_approved_by: "pending (authoring owner to confirm; integrated via commit fa795f1)"
+    human_approved_by: "not recorded (authoring session not exported); integrated via fa795f1"
     human_review_ref: >-
       integration commit fa795f1 (compliance/structure); authoring session id
       not recorded
-    status: draft
+    status: merged
 
   - commit_range: "17be598..integration/d8-structure"
     date: "2026-11-20"
@@ -298,10 +298,10 @@ entries:
       - README.md
       - docs/architecture/repository-structure-mapping.md
       - docs/ai-use-log.yaml
-    human_approved_by: "pending (owner to confirm before merge)"
+    human_approved_by: "HUANG SIYING (60572233); reviewed in PR #13/#14"
     human_review_ref: >-
       Local migration only; not pushed. Rationale to be confirmed by owner.
-    status: draft
+    status: merged
 
   - commit_range: "4ae4fef..integration/a1-fix"
     date: "2026-11-20"
@@ -331,11 +331,11 @@ entries:
       - test/offline/test_portfolio_context.py
       - examples/
       - docs/ai-use-log.yaml
-    human_approved_by: "pending (owner A to confirm before merge)"
+    human_approved_by: "ZHANG Yating (60868911); reviewed in PR #13/#14"
     human_review_ref: >-
-      Ported from the owner's local integration/local-fixes worktree; owner A to
-      review the current-tree adaptation before merge.
-    status: draft
+      Ported from the owner's local integration/local-fixes worktree; reviewed
+      in PR #13/#14.
+    status: merged
 
   - commit_range: "39624b8..integration/d8-structure"
     date: "2026-11-20"
@@ -348,24 +348,56 @@ entries:
       Restore the versioned runtime prompt records (Section 5 / D9 structure)
       prompts/prompt_v1.0.yaml and prompts/prompt_v1.1.yaml from commit 7f9c3ec
       of the compliance/structure history. Paths inside v1.0 adapted to the D8
-      src/ layout (tradingagents/... -> src/tradingagents/...); v1.1 needed no
-      path change. Version content and candidate status are unchanged.
+      src/ layout (old `tradingagents/...` paths -> `src/tradingagents/...`);
+      v1.1 needed no path change. Version content and candidate status are unchanged.
     files_changed:
       - prompts/
       - docs/ai-use-log.yaml
-    human_approved_by: "pending (owner to confirm before merge)"
+    human_approved_by: "HUANG SIYING (60572233); reviewed in PR #13/#14"
     human_review_ref: >-
-      Restored verbatim from 7f9c3ec; authoring session not recorded. Owner to
-      confirm the D8 path adaptation.
-    status: draft
+      Restored verbatim from 7f9c3ec; authoring session not recorded. D8 path
+      adaptation reviewed in PR #13/#14.
+    status: merged
 
+  - commit_range: "b220fff..fix/final-compliance"
+    date: "2026-11-25"
+    owner: E
+    agent: "Claude Code (DeepSeek-V4-Flash); supervised by HUANG SIYING"
+    session_ref: >-
+      Final compliance pass: D1 requirements/AI-use log, D2 trace/invariants and
+      architecture refresh, D3 permission/path migration, D7 gate-2 checks,
+      D4 records, D5 transcript cleanup and D6 report appendix. The session
+      transcript is this supervised conversation; no new D5 session is claimed.
+    session_id: null
+    summary: >-
+      Brought the submission artifacts back in line with integrated main:
+      added full supporting entries for invariant/performance/governance/security;
+      added INV-A1/B1/D1 and FR-A1/B2/C2/D2 rows to the invariant and trace
+      registers; migrated governance paths to src/ and test/; added permission,
+      secret-scan, mypy and contract checks to gate 2; refreshed the blueprint,
+      runtime policy, ADR statuses, option ledger and evaluation logbook; filled
+      the D4 debt/bug/review records; cleaned the E1 transcript annotations; and
+      added the verification appendix to the report.
+    files_changed:
+      - AGENTS.md
+      - Prompt.md
+      - README.md
+      - Report.md
+      - docs/
+      - scripts/ci/
+      - src/
+      - test/
+      - .opencode/
+      - .agent/
+    human_approved_by: "HUANG SIYING (60572233); PR review pending"
+    human_review_ref: "PR on branch fix/final-compliance; branch protection requires one approving review"
+    status: final
 
 notes: >-
-  Merged integration log: entries from owners E (NFR-E1), D (FR-D2) and C
-  (FR-C2) are kept as separate entries. Owner C's original detailed
-  student/task record is preserved below as a comment block so no real
-  record is lost. Entries from unmerged branches are appended as those
-  branches integrate.
+  Consolidated AI-use log, current to 2026-11-25. Entries from owners E
+  (NFR-E1), D (FR-D2), C (FR-C2), B (FR-B2) and A (FR-A1) are merged into
+  main and kept as separate records. Owner C's original detailed student/task
+  record is preserved below as a comment block so no real record is lost.
 
 # ==== FR-C2 (owner C) original detailed record, preserved verbatim ====
 # # AI 使用日志 —— TradingAgents FR-C2
@@ -405,26 +437,26 @@ notes: >-
 #   base_commit_subject: "chore: TradingAgents v0.7.1 baseline and requirements options"
 # 
 # files_modified:
-#   - path: "tradingagents/dataflows/vendor_skip.py"
+#   - path: "src/tradingagents/dataflows/vendor_skip.py"
 #     change: "added"
 #     role: "RunSkipState：锁内原子 acquire/finish/wait，每次运行一个局部对象"
-#   - path: "tradingagents/dataflows/vendors/fred.py"
+#   - path: "src/tradingagents/dataflows/vendors/fred.py"
 #     change: "modified"
 #     role: "get_api_key 空白/空串视为未配置；不记跳过日志"
-#   - path: "tradingagents/dataflows/router.py"
+#   - path: "src/tradingagents/dataflows/router.py"
 #     change: "modified"
 #     role: "route_to_vendor 加 state；角色化跳过；单一日志；等待超时不调用 vendor；跳过后继续 fallback"
-#   - path: "tradingagents/agents/tools.py"
+#   - path: "src/tradingagents/agents/tools.py"
 #     change: "modified"
 #     role: "get_macro_indicators 读取 configurable[fr_skip_state] 传给 router"
-#   - path: "tradingagents/graph/trading_graph.py"
+#   - path: "src/tradingagents/graph/trading_graph.py"
 #     change: "modified"
 #     role: "_attach_skip_state 复制 config；propagate/debug/stream_run 的运行状态传递"
 # 
 # tests_added:
-#   - "tests/test_fr_c2_probe.py"
-#   - "tests/test_fr_c2_acceptance.py"
-#   - "tests/test_fr_c2_paths.py"
+#   - "test/offline/test_fr_c2_probe.py"
+#   - "test/offline/test_fr_c2_acceptance.py"
+#   - "test/offline/test_fr_c2_paths.py"
 # 
 # docs_added:
 #   - "docs/req/fr-c2-plan.md"

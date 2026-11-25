@@ -159,6 +159,7 @@ def _evaluate_integrity(inputs: RiskInputs, direction, consistent: bool,
     tp = inputs.target_position
     if tp is not None and weight_problem(tp.target_position_weight) is None:
         weight = tp.target_position_weight
+        assert weight is not None
         current = current_stock_value(portfolio, inputs.ticker)
         projected = projected_stock_value(weight, portfolio.portfolio_value)
         increase = projected - current
@@ -195,6 +196,7 @@ def _evaluate_single_name(inputs: RiskInputs, direction, policy: RiskPolicy) -> 
     problem = weight_problem(weight)
     if problem is not None:
         return _rule(R2, RuleOutcome.UNKNOWN, problem)
+    assert weight is not None
     if weight > policy.single_name_cap:
         return _rule(R2, RuleOutcome.VIOLATED,
                      "projected single-name weight exceeds the cap",
@@ -234,6 +236,7 @@ def _evaluate_sector(inputs: RiskInputs, direction, policy: RiskPolicy) -> RuleR
     weight = inputs.target_position.target_position_weight
     if weight_problem(weight) is not None:
         return _rule(R3, RuleOutcome.UNKNOWN, "target weight is unusable")
+    assert weight is not None
     try:
         validate_snapshot(inputs.portfolio, inputs.trade_date)
     except SnapshotError as exc:

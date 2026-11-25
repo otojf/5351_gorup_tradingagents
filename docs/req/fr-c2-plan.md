@@ -37,18 +37,18 @@
 
 | 层 | 位置 | 说明 |
 |---|---|---|
-| Agent 提示词/工具绑定 | `tradingagents/agents/analysts/news_analyst.py:13-18`、`:56` | news analyst 绑定 `get_macro_indicators`，由 LLM 在多轮 tool call 中反复调用 |
-| 工具定义 | `tradingagents/agents/tools.py:232-264` | `@tool get_macro_indicators(...)`，`:264` 调 `route_to_vendor("get_macro_indicators", ...)`；已用 `InjectedState` 从图 state 取 `trade_date` |
-| 路由器 | `tradingagents/dataflows/router.py:200-297` | `route_to_vendor` 取 vendor 链，`:231-259` 循环调用实现 |
+| Agent 提示词/工具绑定 | `src/tradingagents/agents/analysts/news_analyst.py:13-18`、`:56` | news analyst 绑定 `get_macro_indicators`，由 LLM 在多轮 tool call 中反复调用 |
+| 工具定义 | `src/tradingagents/agents/tools.py:232-264` | `@tool get_macro_indicators(...)`，`:264` 调 `route_to_vendor("get_macro_indicators", ...)`；已用 `InjectedState` 从图 state 取 `trade_date` |
+| 路由器 | `src/tradingagents/dataflows/router.py:200-297` | `route_to_vendor` 取 vendor 链，`:231-259` 循环调用实现 |
 | vendor 映射 | `router.py:142-144`、`:20` | `get_macro_indicators -> {"fred": get_macro_data}` |
 | 未配置分支（vendor 链内） | `router.py:243-247` | 捕获 `VendorNotConfiguredError`：**每次调用**都 `logger.warning(...)`（`:244`）并 `continue` |
 | 未配置分支（兜底） | `router.py:288-294` | 链走完后可选类别返回 `DATA_UNAVAILABLE...`，**每次调用**再一条 warning（`:290`） |
-| FRED 数据函数 | `tradingagents/dataflows/vendors/fred.py:167-286` | `get_macro_data` |
+| FRED 数据函数 | `src/tradingagents/dataflows/vendors/fred.py:167-286` | `get_macro_data` |
 | 配置检查 | `fred.py:102-110` | `get_api_key()` 读 `os.getenv("FRED_API_KEY")`，缺失抛 `FredNotConfiguredError`（`:93-99`，继承自 `VendorNotConfiguredError`→`errors.py:53`） |
 | HTTP | `fred.py:146-164` (`_request`) → `net.py:6-24` (`get_scrubbed`) | 仅 `get_api_key()` 之后才会走到 HTTP |
-| 图的 state | `tradingagents/agents/state.py:45`、`graph/propagation.py:13-65` | `AgentState`（`MessagesState` + 字段）；初始 state 由 `create_initial_state` 构造 |
-| checkpoint | `tradingagents/graph/checkpointer.py:28-43` | SqliteSaver 只序列化**图 state 与 writes**，不序列化 `RunnableConfig.configurable` |
-| 运行作用域（先例） | `tradingagents/graph/trading_graph.py:185`、`dataflows/config.py:13,44-62` | 已有 `run_config` / `ContextVar` / `run_config_context` 作为“一次运行”边界的先例 |
+| 图的 state | `src/tradingagents/agents/state.py:45`、`graph/propagation.py:13-65` | `AgentState`（`MessagesState` + 字段）；初始 state 由 `create_initial_state` 构造 |
+| checkpoint | `src/tradingagents/graph/checkpointer.py:28-43` | SqliteSaver 只序列化**图 state 与 writes**，不序列化 `RunnableConfig.configurable` |
+| 运行作用域（先例） | `src/tradingagents/graph/trading_graph.py:185`、`dataflows/config.py:13,44-62` | 已有 `run_config` / `ContextVar` / `run_config_context` 作为“一次运行”边界的先例 |
 
 ---
 
@@ -57,7 +57,7 @@
 - 缺 key 时**唯一**的 HTTP 触发点在 `fred.py:214` 的首次 `_request`，而 `get_api_key()` 在此之前抛错，所以 HTTP = 0。
 - 每次 `get_macro_indicators`（`tools.py:264`）→ 每次 `route_to_vendor`（`router.py:200`）→ 每次 `get_macro_data`（`fred.py:167`）。整链无缓存、无重试。
 - 缺 key 当前每次调用产生 **2 条 WARNING**：`router.py:244` + `router.py:290`。**两处都要处理**。
-- 运行边界现状：`propagate` 用 `with run_config(...)`（`trading_graph.py:185`）；`debug` 分支在 `propagate` 内（`:386-396`）内部调 `stream_run`；CLI 直接 `stream_run`（`cli/run.py:241`）；`stream_run` 用 `run_config_context`（`:422`），调用者与图在**同一线程**交替推进。
+- 运行边界现状：`propagate` 用 `with run_config(...)`（`trading_graph.py:185`）；`debug` 分支在 `propagate` 内（`:386-396`）内部调 `stream_run`；CLI 直接 `stream_run`（`src/cli/run.py:241`）；`stream_run` 用 `run_config_context`（`:422`），调用者与图在**同一线程**交替推进。
 
 ---
 
@@ -95,7 +95,7 @@
 
 采用**单一原子协调原语**：不是“先 `is_skipped` 再 `claim_first`”，而是把“查跳过 / 查是否已有资格 / 安装 Event / 返回资格”放在**同一把锁内**完成，取得资格后**无需也不允许**再单独 `is_skipped`（把两个动作合并为原子操作，消除“登记释放后再次拿到首次资格”的竞态）。
 
-新增 `tradingagents/dataflows/vendor_skip.py`：
+新增 `src/tradingagents/dataflows/vendor_skip.py`：
 
 ```python
 import threading
@@ -173,18 +173,18 @@ class RunSkipState:
 
 **具体接入位置（graph → tools.py → router）**：
 
-1. `tradingagents/graph/trading_graph.py`：
+1. `src/tradingagents/graph/trading_graph.py`：
    - `_new_skip_state()` / `_attach_skip_state(args, state=None, reuse=...)`：**复制**
      `config`/`configurable` 后返回新 `args`，**不修改调用者字典**；`reuse=False` 时强制新建，
      `reuse=True` 时保留已有状态（供 debug 复用）。
    - `_run_graph`（`propagate` 与 `debug` 共用）：`reuse=False`，每次新状态。
    - `stream_run`（CLI 直接路径）：对副本附加（`reuse=True`）；debug 传入的 args 已含状态 → 复用，
      不重置，故 debug 仍只记一条跳过日志。
-2. `tradingagents/agents/tools.py`：
+2. `src/tradingagents/agents/tools.py`：
    - `get_macro_indicators` 增加 `config: RunnableConfig` 注入参数，从
      `config["configurable"]["fr_skip_state"]` 取出 `RunSkipState` 并传给
      `route_to_vendor("get_macro_indicators", ..., state=state)`；取不到时传 `None`。
-3. `tradingagents/dataflows/router.py`：`route_to_vendor(method, *args, state=None, **kwargs)`；
+3. `src/tradingagents/dataflows/router.py`：`route_to_vendor(method, *args, state=None, **kwargs)`；
    缺省 `None` 时惰性建 `RunSkipState()`（仅本次调用生命周期）。
 
 ---
@@ -259,16 +259,16 @@ for vendor in vendor_chain:
 
 ## 9. 最终修改清单（已落地）
 
-1. 新增 `tradingagents/dataflows/vendor_skip.py`：`RunSkipState`（`threading.Lock` 保护 `acquire`/`finish`
+1. 新增 `src/tradingagents/dataflows/vendor_skip.py`：`RunSkipState`（`threading.Lock` 保护 `acquire`/`finish`
    的原子决策；`threading.Event` 协调首次进入；`finish` 在 `finally` 调用并返回“是否首次跳过”；
    只存原因码）。
-2. `tradingagents/dataflows/vendors/fred.py`：空串/纯空白视为未配置（`.strip()`）；**不**写跳过日志
+2. `src/tradingagents/dataflows/vendors/fred.py`：空串/纯空白视为未配置（`.strip()`）；**不**写跳过日志
    （日志统一由 router 负责）。
-3. `tradingagents/dataflows/router.py`：签名加 `state=None`；循环角色化（`acquire` → winner/waiter/skipped；
+3. `src/tradingagents/dataflows/router.py`：签名加 `state=None`；循环角色化（`acquire` → winner/waiter/skipped；
    统一 `try/except`；`finally: finish(...)`；**等待超时不调用 vendor**）；兜底 warning 仅对非缺凭据写。
-4. `tradingagents/agents/tools.py`：`get_macro_indicators` 增加 `config: RunnableConfig` 注入，取
+4. `src/tradingagents/agents/tools.py`：`get_macro_indicators` 增加 `config: RunnableConfig` 注入，取
    `configurable["fr_skip_state"]` 传给 `route_to_vendor(..., state=...)`。
-5. `tradingagents/graph/trading_graph.py`：`_new_skip_state`/`_attach_skip_state`（**复制 config，不改调用者**）；
+5. `src/tradingagents/graph/trading_graph.py`：`_new_skip_state`/`_attach_skip_state`（**复制 config，不改调用者**）；
    `_run_graph` 每次新状态；`stream_run` 对副本附加、debug 复用。
 6. 不改 `get_macro_data` 的 HTTP/解析逻辑，不引入重试，不改 fallback 顺序。
 
@@ -282,16 +282,16 @@ for vendor in vendor_chain:
 
 实际测试文件：
 
-- `tests/test_fr_c2_acceptance.py`：缺 key 计数、空/空格/空白 key（含真实 `get_macro_data` 仅换网络出口）、
+- `test/offline/test_fr_c2_acceptance.py`：缺 key 计数、空/空格/空白 key（含真实 `get_macro_data` 仅换网络出口）、
   重复调用、真实并发（外层 Barrier + Event 门控）、独立 Context、两次运行隔离、fallback、网络异常不登记、
   配置恢复、**等待超时不进入数据源**。
-- `tests/test_fr_c2_paths.py`：`propagate`/`debug`/直接 `stream_run` 多请求（>1、进入1、HTTP0、日志1、完成）、
+- `test/offline/test_fr_c2_paths.py`：`propagate`/`debug`/直接 `stream_run` 多请求（>1、进入1、HTTP0、日志1、完成）、
   流式 English/French 配置隔离、同实例并发隔离、**同一 config 两次运行独立且不污染调用者**。
-- `tests/test_fr_c2_probe.py`：前置探针（对象传递、checkpoint 持久化、异常仍写、真实中断恢复用新对象）。
+- `test/offline/test_fr_c2_probe.py`：前置探针（对象传递、checkpoint 持久化、异常仍写、真实中断恢复用新对象）。
 
 执行与结果（详见 `implementation-verification.md`）：
 
-1. 针对性：`pytest tests/test_fr_c2_acceptance.py tests/test_fr_c2_paths.py tests/test_fr_c2_probe.py tests/test_fred.py tests/test_vendor_routing.py tests/test_vendor_errors.py tests/test_graph_end_to_end.py tests/test_checkpoint_lifecycle.py -q`
+1. 针对性：`pytest test/offline/test_fr_c2_acceptance.py test/offline/test_fr_c2_paths.py test/offline/test_fr_c2_probe.py test/offline/test_fred.py test/offline/test_vendor_routing.py test/offline/test_vendor_errors.py test/offline/test_graph_end_to_end.py test/offline/test_checkpoint_lifecycle.py -q`
 2. 完整离线回归：`pytest -q`（默认 `-m "not integration"`，conftest 已禁网）。
 3. Lint：`ruff check <改动文件与测试>`。
 

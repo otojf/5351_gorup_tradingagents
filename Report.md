@@ -18,7 +18,7 @@ The team began by analyzing and running the TradingAgents baseline. ZHANG Yating
 
 ## 1. Introduction and Project Scope
 
-TradingAgents is a multi-agent application that uses large language models (LLMs) to analyze a financial instrument on a given date. Its analysts collect and summarize market, sentiment, news, and fundamental data. The research and trading agents turn this material into a proposal, and the Portfolio Manager produces a report and investment rating. We extended TradingAgents v0.7.1 from the team baseline at `46bde74`. This report describes the integrated project on `main` at `1cc1d9f`. [Project snapshot][snapshot]
+TradingAgents is a multi-agent application that uses large language models (LLMs) to analyze a financial instrument on a given date. Its analysts collect and summarize market, sentiment, news, and fundamental data. The research and trading agents turn this material into a proposal, and the Portfolio Manager produces a report and investment rating. We extended TradingAgents v0.7.1 from the team baseline at `46bde74`. The integrated code snapshot is `1cc1d9f`; the final report was merged at `b220fff`. [Project snapshot][snapshot]
 
 The baseline made it possible to generate a report, but several parts of the run were hard to verify. A model could propose a trade without a deterministic risk check at the publication boundary. A reader could not reliably trace a conclusion to a structured source reference. An unconfigured data source could be retried within the same run, and a fallback from structured output to free text could be easy to miss. The team also needed a repeatable way to evaluate changes to the application. These observations informed work on decision safety, citation traceability, data-source handling, visible degradation, and offline evaluation.
 
@@ -122,6 +122,7 @@ The D8 migration placed application packages under `src/`, deterministic tests u
 | Local integrated regression | The run recorded in PR #14 reports **1,789 passed**, 6 skipped, 1 deselected, and 1 xpassed on the integration tip at `5801e5f`. [PR #14 verification][pr14] |
 | GitHub Actions on PR #14 | **10 successful jobs**, including five single gate jobs, four regression matrix jobs, and the clean-install smoke test. [PR workflow run][ci14] |
 | GitHub Actions on `main` | The push at `1cc1d9f` succeeded. Eight jobs passed and two PR-only jobs were skipped by design. [Main workflow run][cimain] |
+| GitHub Actions on final `main` | The push at `b220fff` after the report merge also succeeded; the same two PR-only jobs were skipped by design. [Final main run][cifinal] |
 | Citation checker | The six supplied AAPL examples produced one `SUPPORTED` and five `UNTRACEABLE` results. [FR-B2 sample evidence][b2verification] |
 | Offline evaluation | The harness recorded results for three fixed cases under both scripted profiles. Section 4.4 gives the per-case results. |
 
@@ -132,7 +133,7 @@ The automated checks exercise representative conditions for each workstream. For
 | Gate | Implemented check and evidence boundary |
 | --- | --- |
 | **1. Test approval** | Checks that the approval record has the required fields. The scope and timing of approval come from the human records. |
-| **2. Static analysis** | Runs Ruff, dependency consistency checks, and byte compilation. Dedicated type, contract, API-surface, security, and permission checks remain outside this gate. |
+| **2. Static analysis** | Runs Ruff, dependency consistency checks, byte compilation, mypy on the safety-critical modules, a permission-model check, a targeted secret scan, layering/prompt-integrity contract tests, and a public-package import smoke. Full-repo type-checking and a full API-compatibility suite remain outside this gate. |
 | **3. Requirements schema** | Validates `requirements.yaml` against `req-schema.json`. A deliberately invalid registry in PR #7 triggered the schema gate and the PR was closed without merging. |
 | **4. Semantic evaluation** | Runs the scripted evaluation tests and checks the expected behavior of the fixed cases. |
 | **5. Regression** | Runs the project suite across the supported Python matrix used by CI. |
@@ -306,10 +307,87 @@ This project also changed how I understand the whole software development proces
 
 Finally, I learned to write more precise prompts and to manage context consciously. I began to clearly define the agent's role, inputs, constraints, and expected output, and I learned to keep conversations focused, break long tasks into smaller ones, and summarize before the context became messy. These skills apply directly to my other projects: I now treat the agent as a supervised collaborator rather than a magic answer generator, and I verify its output before trusting it.
 
+## 9. Verification Evidence Index
 
+The final repository keeps one evidence location per requirement. This index is the shortest path from a claim in the report to the record that supports it.
+
+| Requirement | Primary evidence | What the record establishes | Remaining boundary |
+| --- | --- | --- | --- |
+| FR-A1 / INV-A1 | `docs/evidence/fr-a1/` and the risk-gate suites | 100 invalid fixtures never receive `APPROVED`; approved `HOLD` keeps its rating; malformed inputs fail closed. | The delivered gate covers cash-funded long BUY; SELL/short and the human approval queue are deferred. |
+| FR-B1 / FR-B2 | `docs/evidence/fr-b2/verification.md` | One supplied AAPL citation resolves; five negative cases are `UNTRACEABLE`; registered evidence digests are checked. | The checker verifies resolution, not logical or arithmetic truth; FR-B1 itself is partial. |
+| NFR-C1 / FR-C2 | `docs/evidence/fr-c2/implementation-verification.md` | A missing FRED key yields one source entry, zero HTTP attempts and one skip per run; a later run with a key fetches normally. | Token budget, hard cap and per-agent ledger are not implemented. |
+| FR-D2 / INV-D1 | `test/offline/test_structured_degradation.py` | A failed structured call makes three attempts at most; every exhausted path records `DEGRADED` and a visible report warning. | The eval metric remains scripted, not a real-input quality threshold. |
+| NFR-E1 | `docs/evidence/e1/verification/test-results.txt` and `docs/evidence/e1/demo/compare.md` | Three fixed cases run through the real graph; the manifest records provenance; six gates and branch protection are configured. | The harness proves structural determinism under a scripted source, not live-data reproducibility. |
+| D7 | `docs/evidence/e1/verification/branch-protection.md` and the final main run | Nine required checks, one approving review, strict status checks, and `enforce_admins`; PR #7 was blocked by the schema gate. | Gate 1 is a human record; gate 2 type-checks the safety-critical modules but not the whole baseline. |
+
+The table is deliberately narrower than the requirement registry. It names what the evidence shows and what it does not, so a reviewer does not have to infer the boundary from passing tests.
+
+## 10. Residual Gaps and Review Triggers
+
+The remaining gaps are recorded in the debt register and the risk list. They are scope decisions, not hidden failures:
+
+- **Full-repo type checking.** Gate 2 runs mypy on the risk gate, the citation checker, the eval harness and the integration seams. The upstream baseline is not typed. A change that makes a baseline module safety-relevant should be the trigger to extend the typed set.
+- **Real-input semantic quality.** Gate 4 replays the fixed scripted cases. It catches structural regressions, not a model that becomes less faithful on live data. A prompt or model change that affects production should be paired with a recorded-input replay or an external quality check.
+- **Per-change test approval.** Gate 1 checks one completed approval record. The per-change approvals for FR-A1, FR-B2, FR-C2 and FR-D2 live in their milestones and transcripts. A future automated gate could require a link from each code PR to a test-first record.
+- **Full structured evidence.** FR-B1 remains partial: the delivered checker validates supplied citations, but the system does not yet attach a structured `EvidenceRef` to every key decision field. A requirement change that makes FR-B1 mandatory should reopen the evidence schema.
+- **Token budget.** NFR-C1 is partial; only the FRED skip behavior is delivered. Any change that introduces a provider with materially different pricing should reopen the budget design.
+
+These triggers are the same ones a reviewer would use to decide whether an apparently green run still needs a new round of evidence. Keeping them explicit is part of the process quality claim.
+
+## Appendix A. Gate Design and Negative-Test Coverage
+
+The six gates are only useful if a reviewer can see what each one rejects. The table records the negative case that exercises each gate and the evidence boundary that remains.
+
+| Gate | Implemented check | Negative case that proves it rejects | Residual boundary |
+| --- | --- | --- | --- |
+| 1. Test approval | `scripts/ci/check_test_approval.py` parses the approval record. | A record with a TODO placeholder fails; a missing field fails. | The script cannot prove that approval preceded coding; that is a human record. |
+| 2. Static analysis | Ruff, `pip check`, compileall, mypy on safety-critical modules, permission-model and secret checks, contract tests and import smoke. | A permission pattern that names no real path fails; a fake provider key is detected; a layering or prompt-integrity regression fails. | Full-repo type checking and a full API-compatibility suite are outside the gate (DEBT-02). |
+| 3. Schema | `scripts/ci/check_schema.py` validates the registry against `req-schema.json`. | A registry entry missing `fit_criterion` is rejected; PR #7 is the live capture. | Structural validation only; it does not judge semantic quality. |
+| 4. Semantic evaluation | `scripts/ci/check_semantic_eval.py` replays the fixed golden set. | A case whose expected rating or repeatability assertion fails blocks the change. | The fixed set is scripted, not real-input semantic quality. |
+| 5. Regression | `scripts/ci/check_regression.py` runs the default suite. | Any failing prior test blocks the merge; the final local run recorded 1,789 passed. | Runtime and environment coverage are limited to the CI matrix and the recorded timeout. |
+| 6. AI-use log | `scripts/ci/check_ai_use_log.py` checks that a code/prompt change has a matching entry. | A changed path not covered by any entry fails. | Presence/coverage only; the entry's truth is reviewed by a human. |
+
+The gate tests live in `test/offline/test_ci_gates.py`. The important point is not that the gate scripts exist, but that each has a deliberately bad input that turns it red, and that the live branch protection requires the resulting checks.
+
+## Appendix B. D5 Transcript Coverage
+
+The five transcripts are not five copies of the same session. They cover different stages of the supervised pipeline, and the set is what makes the process auditable.
+
+| Student | Session focus | Recorded interventions | Pipeline evidence |
+| --- | --- | --- | --- |
+| HUANG Siying (60572233) | NFR-E1 evaluation harness and CI gates | 13 indexed turns in the main transcript, plus the PR #6 response appendix | Architecture reading, requirements classification, harness slices, gate review response and D8 integration. |
+| ZHANG Yating (60868911) | FR-A1 risk gate | 19 interventions across the main and feasibility sessions | Requirements classification, architecture candidates, test-plan approval, RED evidence, risk-gate build, audit and demo. |
+| WANG Yixuan (60245953) | FR-B2 citation checker | 12 indexed interventions | Baseline reproduction, acceptance cases, test design, implementation, evidence-integrity follow-up. |
+| REN Longteng (60662195) | FR-C2 FRED skip | 5 intervention groups | Read-only analysis, plan approval, concurrency and run-isolation tests, defect follow-up, evidence packaging. |
+| LI Jin (60263031) | FR-D2 structured-output degradation | 6 indexed interventions | Retry semantics clarification, plan-before-code approval, retry/degradation tests, AI-use log update. |
+
+Collectively the set covers the pipeline the course asks for: requirements classification, architecture candidate generation and evaluation, plan approval before code, build, verification compliance, and a design revision based on test evidence. The transcripts also show where a human stopped the agent: the A1 test-approval gates, the B2 output-path defect, the C2 timeout and run-state defects, the D2 retry ambiguity, and the E1 correction of the tool-count explanation. These are the "what human oversight caught" cases summarised in Section 7.
+
+## Appendix C. Artifact Co-evolution Matrix
+
+The final compliance pass checked the same change at each layer rather than treating the report as a separate document. The matrix records where a requirement lives after the change.
+
+| Change | Requirements registry | Architecture and trace | Code and tests | Evidence and review |
+| --- | --- | --- | --- | --- |
+| FR-A1 risk gate | FR-A1 with nested INV-A1, NFR-A1 and NFR-A2 | Blueprint authority boundary, ADR-FR-A1, invariant and trace rows | `src/tradingagents/risk_gate/`, risk-gate suites, CLI portfolio injection | `docs/evidence/fr-a1/`, PR #12 review, A1 transcript |
+| FR-B2 citation checker | FR-B1 with nested INV-B1; FR-B2 delivered part | Trace row and runtime policy for unresolved claims | `src/fr_b2/`, citation and integrity tests | `docs/evidence/fr-b2/`, PR #11 review, B2 transcript |
+| FR-C2 FRED skip | NFR-C1 delivered part FR-C2 | Runtime policy row and trace row | `src/tradingagents/dataflows/` skip state, acceptance/path tests | `docs/evidence/fr-c2/`, PR #9 review, C2 transcript |
+| FR-D2 degradation | FR-D2 with nested INV-D1 | Runtime policy and trace rows; ADR-001 context design | `src/tradingagents/agents/structured.py`, degradation suite | FR-D2 transcript, AI-use log entry |
+| NFR-E1 / D8 | NFR-E1 with nested FR-E1/E2/E3/INV-E1 plus governance/security entries | Blueprint, ADR-001, evaluation table, logbook, repository mapping | `src/eval/`, `test/offline|live/`, gate 2 package/type/permission/secret checks | `docs/evidence/e1/`, PR #13/#14, six required checks |
+| Final compliance pass | Supporting entries lifted into full records; MoSCoW tradeoff stated | Invariant/trace rows for every delivered requirement; stale status lines corrected | mypy errors fixed; permission and secret checks added; contract/import smoke added | D4 debt/bug/review records refreshed; E1 transcript annotations cleaned |
+
+The matrix is a useful review tool because it exposes a missing layer. For example, a requirement can have a test but no trace row, or a trace row can point at a test that no longer exists. The schema gate and the D2 review catch the first two cases; the human review catches the third. This is why the final pass updated the registry, architecture, code, tests and evidence together rather than editing only the report.
+
+## 11. Conclusion
+
+The delivered system is a baseline extension, not a replacement. It adds a deterministic publication gate, a citation checker, run-scoped vendor skip behavior, visible structured-output degradation, an offline evaluation harness, and six blocking gates. The artifacts co-evolved with the code: the requirements registry carries the supporting invariants and NFRs, the trace matrix names the enforcing component and test for each delivered requirement, and the governance documents point at the real `src/` and `test/` paths.
+
+The main residual risks are scope risks: no token budget, no recorded-input replay and only partial structured evidence. They are visible in the debt register, the risk list and the runtime policy catalog, and each has a review trigger. The submission therefore makes a narrower claim than "the agent is always right": it claims that the safety-relevant paths are deterministic, reviewed, and reproducible under a fixed evaluation setup, and that the places where that claim stops are written down.
+
+[cifinal]: https://github.com/otojf/5351_gorup_tradingagents/actions/runs/45433613941
 [snapshot]: https://github.com/otojf/5351_gorup_tradingagents/tree/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47
-[requirements]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/req/requirements.yaml
-[options]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/req/requirements-options.yaml
+[requirements]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/req/requirements.yaml
+[options]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/req/requirements-options.yaml
 [pr13]: https://github.com/otojf/5351_gorup_tradingagents/pull/13
 [pr14]: https://github.com/otojf/5351_gorup_tradingagents/pull/14
 [review6]: https://github.com/otojf/5351_gorup_tradingagents/pull/6#pullrequestreview-5979894378
@@ -320,44 +398,44 @@ Finally, I learned to write more precise prompts and to manage context conscious
 [review14]: https://github.com/otojf/5351_gorup_tradingagents/pull/14#pullrequestreview-5995939163
 [ci14]: https://github.com/otojf/5351_gorup_tradingagents/actions/runs/44767650957
 [cimain]: https://github.com/otojf/5351_gorup_tradingagents/actions/runs/45042708602
-[a1adr]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/architecture/adr/adr-fr-a1-risk-gate.md
-[a1revision]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/architecture/adr/adr-fr-a1-risk-gate.md#L311-L354
-[a1policy]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/src/tradingagents/risk_gate/policy.py
-[a1fixtures]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/test/offline/risk_gate/test_100_invalid_fixtures.py
-[a1runtime]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/test/offline/risk_gate/test_latency_no_network.py
-[b2guide]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/src/fr_b2/README.md
-[b2verification]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/evidence/fr-b2/verification.md
-[b2followup]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/evidence/fr-b2/verification.md#L69-L94
-[c2verification]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/evidence/fr-c2/implementation-verification.md
+[a1adr]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/architecture/adr/adr-fr-a1-risk-gate.md
+[a1revision]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/architecture/adr/adr-fr-a1-risk-gate.md#L311-L354
+[a1policy]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/src/tradingagents/risk_gate/policy.py
+[a1fixtures]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/test/offline/risk_gate/test_100_invalid_fixtures.py
+[a1runtime]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/test/offline/risk_gate/test_latency_no_network.py
+[b2guide]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/src/fr_b2/README.md
+[b2verification]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/evidence/fr-b2/verification.md
+[b2followup]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/evidence/fr-b2/verification.md#L69-L94
+[c2verification]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/evidence/fr-c2/implementation-verification.md
 [d2commit]: https://github.com/otojf/5351_gorup_tradingagents/commit/8752e8f6db4ad385b6ec32ab4673d86077ab12a9
-[d2tests]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/test/offline/test_structured_degradation.py
-[e1testlog]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/evidence/e1/verification/test-results.txt
-[trace]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/architecture/trace-matrix.md
-[blueprint]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/architecture-blueprint.md
-[pm]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/src/tradingagents/agents/managers/portfolio_manager.py
-[memory]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/architecture/memory-design.md#L6-L46
-[structured]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/src/tradingagents/agents/structured.py
-[e1adr]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/architecture/adr/001-eval-harness.md
-[agents]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/AGENTS.md
-[e1approval]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/evidence/e1/test-approval.md
-[ailog]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/ai-use-log.yaml
-[livetest]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/test/live/test_deepseek_reasoning_live.py
-[compare]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/evidence/e1/demo/compare.md
-[protection]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/evidence/e1/verification/branch-protection.md
+[d2tests]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/test/offline/test_structured_degradation.py
+[e1testlog]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/evidence/e1/verification/test-results.txt
+[trace]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/architecture/trace-matrix.md
+[blueprint]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/architecture-blueprint.md
+[pm]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/src/tradingagents/agents/managers/portfolio_manager.py
+[memory]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/architecture/memory-design.md#L6-L46
+[structured]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/src/tradingagents/agents/structured.py
+[e1adr]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/architecture/adr/001-eval-harness.md
+[agents]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/AGENTS.md
+[e1approval]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/evidence/e1/test-approval.md
+[ailog]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/ai-use-log.yaml
+[livetest]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/test/live/test_deepseek_reasoning_live.py
+[compare]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/evidence/e1/demo/compare.md
+[protection]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/evidence/e1/verification/branch-protection.md
 [localrepair]: https://github.com/otojf/5351_gorup_tradingagents/commit/17be598b67170ea0c6f87605c6e5154ec58bf419
-[bugdiary]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/docs/bug-diary.md
+[bugdiary]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/docs/bug-diary.md
 [e1rating]: https://github.com/otojf/5351_gorup_tradingagents/commit/71eba39ed1fb55a00b21f6ac9fc9cf83ff671b16
 [c2rating]: https://github.com/otojf/5351_gorup_tradingagents/commit/4d2c80a162deb6780d5aaeb123c0b75c3ed50972
-[e1offline]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/test/offline/test_eval_harness.py
-[e1constraints]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/test/offline/test_eval_harness.py#L517-L609
+[e1offline]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/test/offline/test_eval_harness.py
+[e1constraints]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/test/offline/test_eval_harness.py#L517-L609
 [mergeconflict]: https://github.com/otojf/5351_gorup_tradingagents/commit/9737fea6ccc61ab34d16e8b12eed5ceb49356f46
-[b2d5]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/transcripts/60245953-WANG%20Yixuan.md#L12027-L12038
-[b2d5result]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/transcripts/60245953-WANG%20Yixuan.md#L13357-L13368
-[c2d5]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/transcripts/60662195-RenLongteng.md#L11496-L11509
-[c2d5result]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/transcripts/60662195-RenLongteng.md#L12526-L12542
+[b2d5]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/transcripts/60245953-WANG%20Yixuan.md#L12027-L12038
+[b2d5result]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/transcripts/60245953-WANG%20Yixuan.md#L13357-L13368
+[c2d5]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/transcripts/60662195-RenLongteng.md#L11496-L11509
+[c2d5result]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/transcripts/60662195-RenLongteng.md#L12526-L12542
 [a1d5]: https://github.com/otojf/5351_gorup_tradingagents/blob/faeeb90a2907f2167b535fc10c3b5fe79ed5c4cb/transcripts/60868911-ZHANG%20Yating.md#L43053-L43061
 [a1d5result]: https://github.com/otojf/5351_gorup_tradingagents/blob/faeeb90a2907f2167b535fc10c3b5fe79ed5c4cb/transcripts/60868911-ZHANG%20Yating.md#L44857-L44865
-[e1d5]: https://github.com/otojf/5351_gorup_tradingagents/blob/1cc1d9fa5050bd48e2931508cfc6e54d24e04c47/transcripts/60572233-HUANG-SIYING.md#L11828-L11850
+[e1d5]: https://github.com/otojf/5351_gorup_tradingagents/blob/main/transcripts/60572233-HUANG-SIYING.md#L11828-L11850
 [d2d5clarification]: https://github.com/otojf/5351_gorup_tradingagents/blob/6e7d12a4227e4454c9477abf907a98fce90b6f3b/transcripts/60263031-LI%20Jin.md#L2631-L2662
 [d2d5approval]: https://github.com/otojf/5351_gorup_tradingagents/blob/6e7d12a4227e4454c9477abf907a98fce90b6f3b/transcripts/60263031-LI%20Jin.md#L3279-L3324
 

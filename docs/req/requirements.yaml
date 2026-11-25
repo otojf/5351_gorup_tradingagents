@@ -1,13 +1,16 @@
 schema_version: "1.0"
 project: "CS5351 Group Project - TradingAgents"
-updated: "2026-11-11"
-source_document: "需求与分工-TradingAgents.md"
+updated: "2026-11-25"
+source_document: "TradingAgents baseline 46bde74 + docs/evidence/<req>/"
 options_file: "requirements-options.yaml"
 notes: >-
-  Final registry: 5 primary requirements, one per owner. The 35-item option pool
-  is in requirements-options.yaml. Invariants and supporting NFRs are folded into
-  each primary requirement's fit_criterion and supporting_requirements; they do
-  not consume a separate slot. Priority uses MoSCoW.
+  Final registry: 5 primary requirements, one per owner, plus nested supporting
+  entries that make the invariant, performance, governance and security
+  coverage explicit. The 35-item option pool is in requirements-options.yaml.
+  Priority uses MoSCoW; all five primaries are Must. Explicit tradeoff: with the
+  course window the team delivered the five end-to-end Must requirements with
+  evidence rather than the Should/Could candidates; those remain in the option
+  pool for future work.
 
 requirements:
 
@@ -35,9 +38,55 @@ requirements:
       没有确定性风控校验；论文声称风控在管风险，代码里没有硬规则。
     supporting_requirements:
       - FR-A2
-      - INV-A1
-      - NFR-A1
-      - NFR-A2
+      - id: INV-A1
+        type: invariant
+        category: invariant
+        statement: >-
+          任何缺少止损或超过单票上限的决策不得标为 APPROVED。
+        fit_criterion: >-
+          100 个违规 fixture 0 放行；回归套件 invariant violation = 0。
+        priority: must
+        owner: A
+        component: "risk_gate"
+        source: "基线缺口：无止损/仓位上限的硬校验。"
+        verification:
+          test: "test/offline/risk_gate/test_invariants.py::test_invariant_sweep_never_approves_violations"
+          monitor: "invariant_violations"
+          demo: "100 个违规 fixture 0 放行"
+        status: implemented
+      - id: NFR-A1
+        type: non_functional
+        category: performance
+        statement: >-
+          风控评估额外延迟不得超过 2 秒/次，且不得调用外部网络服务。
+        fit_criterion: >-
+          1,000 次核心评估 p95 增量不超过 2 秒；风控模块单测 0 次网络调用。
+        priority: must
+        owner: A
+        component: "risk_gate"
+        source: "生产级要求：风控不能成为不可接受的延迟来源。"
+        verification:
+          test: "test/offline/risk_gate/test_latency_no_network.py::test_p95_core_evaluation_latency_within_two_seconds"
+          monitor: "risk_gate_latency_ms"
+          demo: "展示风控前后耗时与零网络调用"
+        status: implemented
+      - id: NFR-A2
+        type: non_functional
+        category: governance
+        statement: >-
+          100% 的风控评估必须可审计，至少包含规则 ID、输入快照、裁决、
+          policy_version 和时间戳。
+        fit_criterion: >-
+          10 次运行审计覆盖率 100%；抽样 50 条字段完整率 100%。
+        priority: must
+        owner: A
+        component: "risk_gate"
+        source: "课程要求：强可追溯、运行时可审计。"
+        verification:
+          test: "test/offline/risk_gate/test_audit_trail.py::test_every_evaluation_has_a_complete_audit_record"
+          monitor: "risk_audit_coverage"
+          demo: "展示一条裁决的完整审计记录"
+        status: implemented
     verification:
       test: "test_invariant_sweep_never_approves_violations"
       monitor: "risk_verdict_count"
@@ -67,7 +116,22 @@ requirements:
       有出处/无出处，事后无法审计。
     supporting_requirements:
       - FR-B2
-      - INV-B1
+      - id: INV-B1
+        type: invariant
+        category: invariant
+        statement: >-
+          不允许 SUPPORTED 结论没有有效 EvidenceRef。
+        fit_criterion: >-
+          回归中 0 个 supported 无 ref；违反时 invariant 测试失败。
+        priority: must
+        owner: B
+        component: "evidence"
+        source: "课程要求：强可追溯；防止编造。"
+        verification:
+          test: "test/offline/fr_b2/test_check_citations.py::test_negatives_never_count_as_supported"
+          monitor: "invariant_violations"
+          demo: "无有效引用的结论不计入 supported"
+        status: partial
       - NFR-B1
       - NFR-B2
     verification:
@@ -139,7 +203,22 @@ requirements:
     supporting_requirements:
       - FR-D1
       - FR-D3
-      - INV-D1
+      - id: INV-D1
+        type: invariant
+        category: invariant
+        statement: >-
+          任何结构化输出失败都必须显式标记 DEGRADED，不允许静默降级。
+        fit_criterion: >-
+          20 次强制失败 0 次静默；事件数等于降级次数。
+        priority: must
+        owner: D
+        component: "structured_adapter"
+        source: "课程要求：失败路径必须可见。"
+        verification:
+          test: "test/offline/test_structured_degradation.py::test_invariant_no_silent_degradation"
+          monitor: "invariant_violations"
+          demo: "零静默降级审计"
+        status: implemented
       - NFR-D1
     verification:
       test: "test_degraded_marker"
@@ -223,13 +302,46 @@ requirements:
         statement: >-
           任一 blocking gate 失败不得合并；仓库不得包含 secret。
         fit_criterion: >-
-          分支保护要求 6 项检查；secret 扫描 0 发现；坏 PR 0 合并；
+          分支保护要求 9 个检查；secret 扫描 0 发现；坏 PR 0 合并；
           回归套件 invariant violation = 0。
         verification:
-          test: "test_gate3_bad_input_missing_field"
+          test: "test/offline/test_ci_gates.py::test_gate3_bad_input_missing_field"
           monitor: "gate_failures"
           demo: "分支保护配置与坏 PR 拦截"
-        status: partial
+        status: implemented
+      - id: NFR-GOV-02
+        type: non_functional
+        category: governance
+        statement: >-
+          主分支必须启用保护，并配置六道 gates；0 个失败 gate 的合并。
+        fit_criterion: >-
+          分支保护配置存在且要求 9 个检查 + 1 个 approving review；
+          6/6 gate 在 CI 中配置；坏 PR #7 被 gate-3 拦下。
+        priority: must
+        owner: E
+        component: "ci_gates"
+        source: "课程要求：GitHub blocking gates 与 branch protection。"
+        verification:
+          test: "test/offline/test_ci_gates.py::test_gate_scripts_importable_and_have_main"
+          monitor: "ci_gate_status"
+          demo: "分支保护配置与坏 PR 拦截"
+        status: implemented
+      - id: NFR-SEC-01
+        type: non_functional
+        category: security
+        statement: >-
+          仓库与日志不得包含 API key/secret；报告中的凭据必须脱敏。
+        fit_criterion: >-
+          secret 扫描 0 发现；10 份报告 0 泄露。
+        priority: must
+        owner: E
+        component: "repo_security"
+        source: "课程红线：不要提交 API key。"
+        verification:
+          test: "test/offline/test_ci_gates.py::test_gate2_secret_scan_real_repo_clean"
+          monitor: "secret_findings"
+          demo: "gate 2 secret 扫描 0"
+        status: implemented
     verification:
       test: "test_suite_runs_three_times_with_stable_rating_reports_and_tokens"
       monitor: "eval_pass_rate"

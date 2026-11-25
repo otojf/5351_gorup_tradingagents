@@ -186,4 +186,6 @@ def invoke_structured_or_freetext(
         if on_degraded is not None:
             on_degraded(outcome)
         return plain_llm.invoke(prompt).content
+    if outcome.value is None:
+        raise RuntimeError("structured outcome marked OK without a value")
     return render(outcome.value)

@@ -139,3 +139,34 @@ not given an invented verdict.
   `risk-controlled` / `risk-gate`); all 10 required checks green after
   retargeting the base to `main`.
 - **Resolution:** merged to `main` as `0f233da` (2026-11-23).
+
+## PR #18 — docs: record D5 transcript status and complete review memos
+
+- **Reviewers:** Z111-1, 1078622509
+- **Date:** 2026-11-23
+- **Verdict:** APPROVE (both reviews)
+- **Change summary:** recorded the final D5 transcript set, marked A1 as merged,
+  and completed the review memos for PRs #15/#16/#17.
+- **Areas checked:** D5 coverage (all five students), review-record accuracy
+  against GitHub, AI-use-log references, and security (no secrets).
+- **Resolution:** merged to `main` as `9792bec` (2026-11-23).
+
+## PR #19 — docs: final D6 project report
+
+- **Reviewer:** degna9838-pixel (approving review; an earlier review was
+  dismissed after a push)
+- **Date:** 2026-11-24
+- **Verdict:** APPROVE
+- **Change summary:** final D6 Report: five student reflections, contribution
+  table, integrated process/verification/co-evolution evidence, and human
+  oversight cases.
+- **Areas checked:** D6 word/page limits, names/IDs, contribution table,
+  reflection lengths, evidence links, and consistency with `main` at `1cc1d9f`.
+- **Resolution:** merged to `main` as `b220fff` (2026-11-25).
+
+## Closed PRs (not merged)
+
+- **PR #7** — deliberate gate-3 schema demo; closed without merge after the gate
+  rejected the invalid registry. No review was submitted.
+- **PR #8** — early FR-C2 branch; superseded by PR #9 and closed. No review was
+  submitted.

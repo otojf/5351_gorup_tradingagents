@@ -19,15 +19,17 @@
     "prompts/**"
   ],
 
-  // Paths the agent may read and write (the build surface).
+  // Paths the agent may read and write (the actual D8 build surface).
   "readWrite": [
-    "tradingagents/**",
-    "cli/**",
-    "tests/**",
-    "eval/**",
+    "src/tradingagents/**",
+    "src/cli/**",
+    "src/eval/**",
+    "src/fr_b2/**",
+    "test/**",
     "scripts/ci/**",
     "docs/**",
-    "transcripts/**"
+    "transcripts/**",
+    "pyproject.toml"
   ],
 
   // Frozen: never read, never write. Secrets/credentials.
@@ -49,8 +51,9 @@
       "architecture-blueprint.md"
     ],
     "requiresArchitectureDecision": [
-      "tradingagents/agents/rating.py",
-      "tradingagents/graph/**",
+      "src/tradingagents/agents/rating.py",
+      "src/tradingagents/graph/**",
+      "src/tradingagents/risk_gate/**",
       ".github/workflows/**"
     ],
     "requiresHumanReview": ["safety-critical"]
@@ -59,7 +62,19 @@
   // Role overrides (see permission-model.md).
   "roles": {
     "planner": { "write": [] },
-    "builder": { "write": ["readWrite", "docs/**"] },
+    "builder": {
+      "write": [
+        "src/tradingagents/**",
+        "src/cli/**",
+        "src/eval/**",
+        "src/fr_b2/**",
+        "test/**",
+        "scripts/ci/**",
+        "docs/**",
+        "transcripts/**",
+        "pyproject.toml"
+      ]
+    },
     "verifier": { "write": [] }
   }
 }

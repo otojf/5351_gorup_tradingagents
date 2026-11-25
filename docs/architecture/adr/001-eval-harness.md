@@ -1,7 +1,8 @@
 # ADR-001: Offline Reproducible Evaluation Harness
 
-- Status: Implemented on the `feat/nfr-e1-eval` feature branch (slices 1-3),
-  pending team review and merge.
+- Status: Implemented on `feat/nfr-e1-eval` (slices 1-3); merged into `main`
+  through PR #14 (`1cc1d9f`). This ADR is retained as the historical decision
+  record.
 - Date: 2026-11-11
 - Owner: E
 - Requirement: NFR-E1 (with nested FR-E1, FR-E2, FR-E3, INV-E1)
@@ -46,9 +47,9 @@ In scope:
 Out of scope (not approved for this stage):
 
 - Real-input reproducibility via recording/replay (FR-E4).
-- Physically migrating `src/` / `test/offline|live` (a structural mapping is
-  documented instead; see `repository-structure-mapping.md`).
-- Any change to `tradingagents/` production behavior.
+- The physical D8 migration was completed later in PR #13; this ADR's decision
+  predates that migration and is retained for the record.
+- Any change to `src/tradingagents/` production behavior.
 
 ## 3. Architecture candidates
 
@@ -94,7 +95,7 @@ with a per-run manifest.
 - Not proven: real-input reproducibility. The scripted source is not real market
   or LLM data; recording/replay (FR-E4) is required to make that claim.
 
-This boundary is stated in `eval/sources.py`, `eval/manifest.py`'s `scope_note`,
+This boundary is stated in `src/eval/sources.py`, `src/eval/manifest.py`'s `scope_note`,
 and the evidence README.
 
 ### 4.2 Runner uses `stream_run`, not `propagate`
@@ -105,9 +106,9 @@ which is the authoritative tool-call count (independent of the callback path).
 
 ### 4.3 Manifest is honest about missing fields
 
-Fields the baseline cannot supply (degradations, risk verdicts, traceability) are
-recorded as `null` with a reason in `unavailable_sources`, never faked. They are
-filled by owners A/B/D when their branches merge.
+Fields the baseline cannot supply are recorded as `null` with a reason in
+`unavailable_sources`, never faked. The A/B/D injection interface is present;
+any field still null has an explicit reason.
 
 ## 5. AI component — layered context structure
 
