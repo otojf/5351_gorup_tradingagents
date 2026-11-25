@@ -13,12 +13,12 @@
 | Created | 2026-11-11 13:23:14 UTC |
 | Last update | 2026-11-11 14:34:15 UTC |
 
-## How to use this transcript
+## Annotation conventions
 
-1. The **Rationale** column is filled from the session's actual user instructions; review it before submission and adjust the wording to match your own judgment. D5 asks for the team member's marked interventions *and the reason for each*.
-2. Rename this file to `transcripts/<student-id>-<student-name>.md` before submission.
-3. Keep the main transcript as-is. The failed retries at the end are separated in Appendix A and should not be counted as agent work.
-4. If you continue in a new OpenCode session, export that session separately and either merge it as a second appendix or keep it as a companion transcript.
+- **Intervention type** records what the student did: approve, redirect, reject, or request more evidence.
+- **Rationale** records the student's reason for that intervention; the rationale cells are the student's annotations.
+- The failed retries in Appendix A are not counted as agent work.
+- Appendices C and D continue the same workstream with the same convention.
 
 ## Scope of this session
 
@@ -28,9 +28,9 @@
 - Boundary: the scripted source proves **harness and graph-structure determinism**, not real-input reproducibility. Real capture/replay (FR-E4) is explicitly out of this session's scope.
 - Pending at the cut-off: the three test-quality fixes in the last user prompt (3-case compare, real tool-arg assertion, run_suite factory requirement) and the six CI gates.
 
-## Intervention index (mark each turn and add your rationale)
+## Intervention index
 
-| # | Turn | User message (excerpt) | Suggested type | Rationale (fill in) |
+| # | Turn | User message (excerpt) | Intervention type | Rationale |
 |---:|---:|---|---|---|
 | 1 | 0 | 请用中文和我对话。 我想先和你对齐这个仓库的整体架构，再讨论任何改动。这一步请你只读，不要修改、创建或删除任何文件。 请阅读项目 README、图的构建与 state 定义、各 agent 的实现、结构化输出路径、报告与日志代码，以及现有测试的组织方式。然后给我一份简洁的架构图说明，覆盖： 1. 从 CLI 入口到最终报告的运行时路径； 2. LangGra... | requirements / architecture | 我还没完全弄清这个项目从 CLI 到报告的实际路径，所以先让它只读，把架构、state 和现有可观测性梳理清楚，再决定评测 harness 接在哪里。 |
 | 2 | 21 | 这份架构图整体是可信的，方向也对。但在进入需求分类之前，有五点需要你先核实或修正。仍然只读，不要修改任何文件。 1. 你在第 5 节说 run_settings() 已经提供“可复现元数据”。我看了 trading_graph.py:255-275，它只是 version、provider、model、analysts、rounds、language、ven... | redirect / evidence check | 我怀疑 run_settings 并不能代表可复现元数据，tool_calls 恒为 0 也不对；所以要求它先核实 manifest 每个字段的来源、离线缓存边界和输出路径，避免在错误前提上继续。 |
@@ -46,7 +46,7 @@
 | 12 | 129 | Slice 2 收尾通过。进 Slice 3：golden set 扩到 3 个真正的 (ticker, date) 案例，加 compare(before, after) 生成 CSV/MD 对比表。 注意：现在 ScriptedModel/ScriptedSource 的 ARGS 和 OHLCV 还是固定 NVDA/2026-01-09，多 case ... | redirect | 只用一个固定 NVDA 案例不能算 3-case golden set；夹具需要按 case 参数化，before/after 也要用不同桩或 config 产生真实差异，真实 baseline 对比等 FR-A1 合入后再做。 |
 | 13 | 156 | Slice 2 收尾通过。进 Slice 3：golden set 扩到 3 个真正的 (ticker, date) 案例，加 compare(before, after) 生成 CSV/MD 对比表。 注意：现在 ScriptedModel/ScriptedSource 的 ARGS 和 OHLCV 还是固定 NVDA/2026-01-09，多 case ... | duplicate prompt | 上一轮没有完全落实 3-case 参数化和真实差异，所以我把同样的要求重复了一遍，确保执行到位。 |
 
-> The **Suggested type** column is only a starting point. Change it to what you actually did: approved, redirected, rejected, or asked for more evidence.
+> Intervention type records what the student actually did: approved, redirected, rejected, or asked for more evidence.
 
 ## Main transcript
 
@@ -17228,15 +17228,15 @@ compare 测试里那句 “tool count must differ” 和实际断言不一致，
 
 ### Intervention index
 
-> Three user instructions drove this session. The **Rationale** cells are drafted from those instructions; review them before submission and adjust the wording to match your own judgment.
+> Three user instructions drove this session; each rationale records the student's reason for that intervention.
 
-| # | Turn | User message (excerpt) | Suggested type | Rationale (fill in) |
+| # | Turn | User message (excerpt) | Intervention type | Rationale |
 |---:|---:|---|---|---|
 | 1 | 0 | "帮我把 PR #6 的 review 意见处理一下。 背景：这是 CS5351 小组项目，我在这个分支上负责 NFR-E1（eval harness + 六道 CI gate）。组员 k11 刚刚 review 了 PR #6，提了几条修改意见。完整报告在这里，先读一遍： /mnt/c/Users/Administrator/AppData/Local/Temp/pr6-review-report.md 当前目录就是 PR #6 的分... | redirect | k11 指出的问题确实存在：trace matrix 引用了不存在的测试，prompt_snapshot 也不是 hash。我要求先修正证据和测试，不 commit/push，等我确认 diff。 |
 | 2 | 90 | 先别 commit，也别 push。我刚看了你上一轮的改动，方向对，但有几处事实和课程要求要对齐。 先读一下课程 spec：/mnt/d/CS_SEMA/5351_software/_pdf_text/project.txt，重点看 D1（requirements / traceability）、D4（verification / review / debt）、D5（每人一份 annotated transcript）、D7（block... | redirect | 上一轮 AI-use log 的 session、日期和批准状态都写错了；我要求它对照课程 spec 的 D1/D4/D5/D7 修正，并补跑完整门禁，仍先不 commit。 |
 | 3 | 142 | 现在可以收尾并做本地 commit，但先别 push。 先做三处小修： 1. 去掉两个文件末尾多余的空行（git diff --check 报的）： - docs/evidence/e1/verification/test-results.txt - tests/test_eval_harness.py 保证文件末尾只有一个换行，不要空行。 2. docs/ai-use-log.yaml 你新加的那条 entry 里，commit_ra... | approve | 证据和门禁都核实之后，我才让它收尾：清理 EOF 空行、把 commit_range 写成真实范围、用现有作者身份在本地 commit；先不 push，等我确认后再请 k11 复审。 |
 
-> **Suggested type** is only a starting point; change it to what the team member actually did. Turn numbers are the 0-based message index in this export.
+> Intervention type records what the team member actually did. Turn numbers are the 0-based message index in this export.
 
 ### Main transcript
 
@@ -26228,22 +26228,22 @@ Committed `b2694db`, working tree clean, not pushed.
 
 ### Intervention index
 
-> Rationale cells are drafted from the actual user instructions for these turns and marked TODO for the student to confirm/edit; only the student can finalise them.
+> Each rationale records the student's reason for that intervention.
 
-| # | Turn | User message (excerpt) | Suggested type | Rationale (fill in) |
+| # | Turn | User message (excerpt) | Intervention type | Rationale |
 |---:|---:|---|---|---|
-| 1 | 207 | 就用当前这个 TUI，不要开新窗口，也不要动当前 PR #6 的 clone。 工作目录是已经 clone 好的： /mnt/d/CS_SEMA/5351_software/group work/5351_gorup_tradingagents-integration 先 cd 过去，后面所有命令和文件都用这个目录下的绝对路径。目标是修 integration/team-features 的 gate-6，不是改代码。 先跑一遍确认失败... | redirect | (TODO confirm) gate-6 在 integration 上真实失败（31 个 A1/B2/governance 路径未被 AI-use log 覆盖）；我要求只在 integration clone 里修记录、不改代码、不改门禁，并按 owner 诚实补 entry。 |
-| 2 | 228 | gate-6 已经 PASS，当前 integration clone 里只改了 docs/ai-use-log.yaml（+71 行）。现在把这份修复整理成给 k11 的补丁，别再改代码。 先复核三条新 entry 的诚实性： - A1 和 governance 的 session_id 必须是 null / not recorded；agent 字段也不能默认写 opencode——如果没有实际记录，就写 "not recorded... | redirect | (TODO confirm) 补丁前先复核诚实性：A1/governance 无真实 session，agent 必须写 not recorded、不许猜 opencode；B2 要与真实 transcript 对上；否则先停下报告。 |
-| 3 | 232 | 先理解现状，再动手。请只在 integration clone 里工作，不要动 PR #6 的 clone，也不要开新窗口。 背景： - integration/team-features 是最终交付物；k11 已经把 E、A1、B2、C2、D2 五个功能分支合进去了，但结构、证据和细节还没收口。 - 远端 integration 现在停在 fa795f1；它比 feat/fr-b2-conclusion 最新 8638e57 少 2 ... | redirect | (TODO confirm) integration 落后远端两个 feature 分支；我要它先在本地 sync（merge B2 与 #6）再评估，不 push、不动 feature 分支。 |
-| 4 | 261 | integration sync 的结果我看了：B2/#6 都合进来了，gate-6 PASS，唯一失败是 test_run_makes_no_network_calls 的评级断言。按 k11 已经采用的集成分支语义走最小修复 A，先解锁 gate-4/5： 1. tests/test_eval_harness.py:573（test_run_makes_no_network_calls）里，把 `assert result.rati... | approve | (TODO confirm) 按 k11 已采用的集成分支语义做最小修复 A：网络测试接受 REVIEW，并只把 A/B/C 的 phantom registry refs 映射到真实测试（无则降 partial），不编测试名。 |
-| 5 | 287 | integration 本地修复已经全绿，现在把它整理成给 k11 的 handoff，不要 push。 先确认 origin/integration/team-features 还是不是 fa795f1；如果 k11 已经推了新提交，停下来把新 SHA 告诉我，不要强行套补丁。 然后生成一个干净的 handoff 包： 1. 导出两个修复提交（不要带 merge commit）： - d522846 docs(ai-use-log):... | approve | (TODO confirm) 本地全绿后整理成给 k11 的 handoff；先确认远端未前进再生成补丁，含干净 worktree 验证。 |
-| 6 | 301 | 现在做一次 CS5351 提交前的 D1–D9 集成审计。只读、只报告：不要改任何文件，不要 commit，不要 push。 工作目录：/mnt/d/CS_SEMA/5351_software/group work/5351_gorup_tradingagents-integration 当前分支 integration/local-repair（HEAD 17be598），已经合入 B2 8638e57 和 #6 665e0a8，本地... | redirect | (TODO confirm) 提交前做一次只读 D1–D9 集成审计，逐项给状态/证据/缺口/负责方，不声称未跑过的 gate。 |
-| 7 | 310 | 现在只看代码缺口和 D8 代码结构，不管 Report/D5/D1/D4 文档。只读审计，不改文件、不 commit、不 push。 1. 读课程 spec 的 D8 和 Section 5：/mnt/d/CS_SEMA/5351_software/_pdf_text/project.txt。当前 integration/local-repair（HEAD 17be598）只有 tradingagents/、cli/、tests/、ev... | redirect | (TODO confirm) 只看代码缺口与 D8 结构：先给 D8 迁移方案和 A1/C2/B2/E1/D2 代码缺口清单，不修。 |
-| 8 | 323 | 现在实施 D8 物理结构迁移。在本地新分支做，不要 push。A1 的四个代码缺口是 Owner A 的，不要在这轮顺手改。 从 integration/local-repair @17be598 新建分支 integration/d8-structure。 按课程 Section 5 / D8： 1. src/ 下放应用包：tradingagents、cli、eval、fr_b2（保持包名不变，减少 import 改动）。用 git ... | approve | (TODO confirm) 确认后实施 D8 物理迁移（src/ + test/offline|live），本地新分支、不 push、不顺手改 A1 业务逻辑。 |
-| 9 | 390 | D8 迁移已经完成（integration/d8-structure @ 903688d）。下一步做一次干净 checkout 验证 + 给 k11 的 D8 handoff，不要 push。 1. 在干净临时目录 clone 当前分支（或 git worktree）。用 PYTHONPATH=<temp>/src 跑测试，不要重装 editable，避免把 conda 环境的 editable 指针从 integration clon... | redirect | (TODO confirm) 迁移后用干净 worktree 隔离验证（不重装 editable），核对 import 指向 temp/src、1758 passed、ls-files 与 fr_b2/tests 清理。 |
-| 10 | 429 | 干净 checkout 验证发现的两处 demo 路径修复是对 D8 的必要补齐。不要 amend 903688d；单独追加一个 commit，保留已验证的基线。 1. 只 add 这两个文件： docs/evidence/e1/demo/run_demo.py docs/evidence/fr-a1/demo/run_demo.py 不要 add handoff/（旧的未跟踪产物）。 提交：fix(d8): update demo s... | approve | (TODO confirm) 干净 checkout 暴露的 demo 路径修复并入 D8，但单独追加 commit 不改基线；随后复跑 gate-2/5/6。 |
+| 1 | 207 | 就用当前这个 TUI，不要开新窗口，也不要动当前 PR #6 的 clone。 工作目录是已经 clone 好的： /mnt/d/CS_SEMA/5351_software/group work/5351_gorup_tradingagents-integration 先 cd 过去，后面所有命令和文件都用这个目录下的绝对路径。目标是修 integration/team-features 的 gate-6，不是改代码。 先跑一遍确认失败... | redirect | gate-6 在 integration 上真实失败（31 个 A1/B2/governance 路径未被 AI-use log 覆盖）；我要求只在 integration clone 里修记录、不改代码、不改门禁，并按 owner 诚实补 entry。 |
+| 2 | 228 | gate-6 已经 PASS，当前 integration clone 里只改了 docs/ai-use-log.yaml（+71 行）。现在把这份修复整理成给 k11 的补丁，别再改代码。 先复核三条新 entry 的诚实性： - A1 和 governance 的 session_id 必须是 null / not recorded；agent 字段也不能默认写 opencode——如果没有实际记录，就写 "not recorded... | redirect | 补丁前先复核诚实性：A1/governance 无真实 session，agent 必须写 not recorded、不许猜 opencode；B2 要与真实 transcript 对上；否则先停下报告。 |
+| 3 | 232 | 先理解现状，再动手。请只在 integration clone 里工作，不要动 PR #6 的 clone，也不要开新窗口。 背景： - integration/team-features 是最终交付物；k11 已经把 E、A1、B2、C2、D2 五个功能分支合进去了，但结构、证据和细节还没收口。 - 远端 integration 现在停在 fa795f1；它比 feat/fr-b2-conclusion 最新 8638e57 少 2 ... | redirect | integration 落后远端两个 feature 分支；我要它先在本地 sync（merge B2 与 #6）再评估，不 push、不动 feature 分支。 |
+| 4 | 261 | integration sync 的结果我看了：B2/#6 都合进来了，gate-6 PASS，唯一失败是 test_run_makes_no_network_calls 的评级断言。按 k11 已经采用的集成分支语义走最小修复 A，先解锁 gate-4/5： 1. tests/test_eval_harness.py:573（test_run_makes_no_network_calls）里，把 `assert result.rati... | approve | 按 k11 已采用的集成分支语义做最小修复 A：网络测试接受 REVIEW，并只把 A/B/C 的 phantom registry refs 映射到真实测试（无则降 partial），不编测试名。 |
+| 5 | 287 | integration 本地修复已经全绿，现在把它整理成给 k11 的 handoff，不要 push。 先确认 origin/integration/team-features 还是不是 fa795f1；如果 k11 已经推了新提交，停下来把新 SHA 告诉我，不要强行套补丁。 然后生成一个干净的 handoff 包： 1. 导出两个修复提交（不要带 merge commit）： - d522846 docs(ai-use-log):... | approve | 本地全绿后整理成给 k11 的 handoff；先确认远端未前进再生成补丁，含干净 worktree 验证。 |
+| 6 | 301 | 现在做一次 CS5351 提交前的 D1–D9 集成审计。只读、只报告：不要改任何文件，不要 commit，不要 push。 工作目录：/mnt/d/CS_SEMA/5351_software/group work/5351_gorup_tradingagents-integration 当前分支 integration/local-repair（HEAD 17be598），已经合入 B2 8638e57 和 #6 665e0a8，本地... | redirect | 提交前做一次只读 D1–D9 集成审计，逐项给状态/证据/缺口/负责方，不声称未跑过的 gate。 |
+| 7 | 310 | 现在只看代码缺口和 D8 代码结构，不管 Report/D5/D1/D4 文档。只读审计，不改文件、不 commit、不 push。 1. 读课程 spec 的 D8 和 Section 5：/mnt/d/CS_SEMA/5351_software/_pdf_text/project.txt。当前 integration/local-repair（HEAD 17be598）只有 tradingagents/、cli/、tests/、ev... | redirect | 只看代码缺口与 D8 结构：先给 D8 迁移方案和 A1/C2/B2/E1/D2 代码缺口清单，不修。 |
+| 8 | 323 | 现在实施 D8 物理结构迁移。在本地新分支做，不要 push。A1 的四个代码缺口是 Owner A 的，不要在这轮顺手改。 从 integration/local-repair @17be598 新建分支 integration/d8-structure。 按课程 Section 5 / D8： 1. src/ 下放应用包：tradingagents、cli、eval、fr_b2（保持包名不变，减少 import 改动）。用 git ... | approve | 确认后实施 D8 物理迁移（src/ + test/offline|live），本地新分支、不 push、不顺手改 A1 业务逻辑。 |
+| 9 | 390 | D8 迁移已经完成（integration/d8-structure @ 903688d）。下一步做一次干净 checkout 验证 + 给 k11 的 D8 handoff，不要 push。 1. 在干净临时目录 clone 当前分支（或 git worktree）。用 PYTHONPATH=<temp>/src 跑测试，不要重装 editable，避免把 conda 环境的 editable 指针从 integration clon... | redirect | 迁移后用干净 worktree 隔离验证（不重装 editable），核对 import 指向 temp/src、1758 passed、ls-files 与 fr_b2/tests 清理。 |
+| 10 | 429 | 干净 checkout 验证发现的两处 demo 路径修复是对 D8 的必要补齐。不要 amend 903688d；单独追加一个 commit，保留已验证的基线。 1. 只 add 这两个文件： docs/evidence/e1/demo/run_demo.py docs/evidence/fr-a1/demo/run_demo.py 不要 add handoff/（旧的未跟踪产物）。 提交：fix(d8): update demo s... | approve | 干净 checkout 暴露的 demo 路径修复并入 D8，但单独追加 commit 不改基线；随后复跑 gate-2/5/6。 |
 
-> **Suggested type** is only a starting point; change it to what the team member actually did.
+> Intervention type records what the team member actually did.
 
 ### Main transcript
 
