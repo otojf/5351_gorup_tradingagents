@@ -1,6 +1,6 @@
 # FR-A1 Test Plan — Deterministic Risk Gate
 
-- Status: Authoring approved; production implementation blocked pending review of these tests.
+- Status: Implemented; the test-first plan was approved before implementation and the gate is merged on `main`. SELL/short criteria remain a documented open scope decision.
 - Date: 2026-11-11
 - Owner: A
 - Requirement: FR-A1, with INV-A1, NFR-A1, NFR-A2
@@ -210,7 +210,7 @@ sector** of the target stock in v1 (scope pending confirmation).
 ## 4. Test matrix
 
 All tests are `@pytest.mark.unit`, offline (the repo's `conftest.py` already
-blocks sockets), parameterized deterministically. Files live under `tests/risk_gate/`.
+blocks sockets), parameterized deterministically. Files live under `test/offline/risk_gate/`.
 
 ### 4.1 Rule-level (`test_rules.py`)
 
@@ -371,14 +371,14 @@ Genuinely unresolved policy extensions are recorded as `test_proposed_*` or here
 ## 8. Staged implementation: core vs integration
 
 Stage 1 (next, on approval) implements **only the independent risk engine** under
-`tradingagents/risk_gate/` (pure, no network/file-I/O/LLM) and its **core** tests.
+`src/tradingagents/risk_gate/` (pure, no network/file-I/O/LLM) and its **core** tests.
 It does **not** modify graph, agent, CLI, reporting, rating, memory, or checkpoint
 code. The core-only test command is:
 
 ```
-pytest tests/risk_gate -q \
-  --ignore=tests/risk_gate/test_integration_retention.py \
-  --ignore=tests/risk_gate/test_decision_boundary.py
+pytest test/offline/risk_gate -q \
+  --ignore=test/offline/risk_gate/test_integration_retention.py \
+  --ignore=test/offline/risk_gate/test_decision_boundary.py
 ```
 
 Stage 2 (later, separate approval) performs integration and the API/CLI/checkpoint
@@ -391,13 +391,13 @@ such. Proposed core-stage production files are enumerated in the ADR.
 The gate is invoked once at the **Portfolio Manager output boundary** (ADR §13),
 so one authoritative evaluation covers the API and CLI paths. The revised tests run
 real graph execution with the existing offline scripted model
-(`tests/test_graph_end_to_end.py`); they do not mock the verdict and do not bypass
+(`test/offline/test_graph_end_to_end.py`); they do not mock the verdict and do not bypass
 the engine.
 
 ### 9.1 Proposed adapter interface (target of the tests)
 
 ```python
-# tradingagents/risk_gate/adapter.py (proposed)
+# src/tradingagents/risk_gate/adapter.py (proposed)
 def build_inputs(ticker, trade_date, trader_proposal, portfolio_decision,
                  risk_portfolio) -> RiskInputs: ...
 def apply_gate(ticker, trade_date, trader_proposal, portfolio_decision,
@@ -492,12 +492,12 @@ now passes a real temporary `audit_dir`, measures conversion + one evaluation + 
 durable write, asserts the write happened, and requires p95 ≤ 2000 ms. The pure-core
 benchmark is unchanged.
 
-**Baseline contract migration:** the six `tests/test_graph_end_to_end.py`
+**Baseline contract migration:** the six `test/offline/test_graph_end_to_end.py`
 assertions for runs without `risk_portfolio` now expect the approved effective
 signal `REVIEW`; the model rating is verified separately via `model_rating` where
 structured data exists. Unrelated assertions are preserved. This is the intentional,
 human-approved fail-closed behavior change (ADR §15.4).
 
 As of this turn: `test_adapter_safety.py` = 15 passed, 2 RED (§15.1, §15.2);
-`tests/risk_gate` = 237 passed, 2 failed, 1 xpassed; original regression = 1412
+`test/offline/risk_gate` = 237 passed, 2 failed, 1 xpassed; original regression = 1412
 passed (post-migration).

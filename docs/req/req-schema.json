@@ -113,7 +113,7 @@
         "status": { "$ref": "#/$defs/status" },
         "supporting_requirements": {
           "type": "array",
-          "description": "Supporting requirements: either a bare ID (reference only) or a full nested entry. NFR-E1 uses full nested entries; other primaries currently reference bare IDs. Whether nested entries are lifted to top level is pending team/instructor confirmation.",
+          "description": "Supporting requirements: either a bare ID (reference only, used for deferred candidates) or a full nested entry. Invariant, performance, governance and security entries are full nested entries; whether any are lifted to top level is pending team/instructor confirmation.",
           "items": {
             "oneOf": [
               { "$ref": "#/$defs/id" },
@@ -134,7 +134,7 @@
         "verification",
         "status"
       ],
-      "description": "A nested supporting requirement under a primary requirement. Same machine-checkable shape as a top-level requirement minus priority/owner/component, which are inherited from the parent unless stated.",
+      "description": "A nested supporting requirement under a primary requirement. Same machine-checkable shape as a top-level requirement; priority/owner/component may be stated explicitly or inherited from the parent.",
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "type": { "$ref": "#/$defs/type" },
