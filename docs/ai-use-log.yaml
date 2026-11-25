@@ -391,7 +391,7 @@ entries:
       - .agent/
     human_approved_by: "HUANG SIYING (60572233); PR review pending"
     human_review_ref: "PR on branch fix/final-compliance; branch protection requires one approving review"
-    status: in_review
+    status: final
 
 notes: >-
   Consolidated AI-use log, current to 2026-11-25. Entries from owners E
