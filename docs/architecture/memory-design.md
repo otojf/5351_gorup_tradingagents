@@ -7,7 +7,7 @@ retrieval policy; ownership; retention; and privacy.
 
 ### 1.1 In-run graph state
 
-Declared in `tradingagents/agents/state.py` (`AgentState`, `MessagesState`).
+Declared in `src/tradingagents/agents/state.py` (`AgentState`, `MessagesState`).
 Per-run keys include `company_of_interest`, `trade_date`, `asset_type`,
 `instrument_context`, the four analyst reports, `investment_debate_state`,
 `investment_plan`, `trader_investment_plan`, `risk_debate_state`,
@@ -17,7 +17,7 @@ unless checkpointed (below).
 
 ### 1.2 Cross-run memory log
 
-`tradingagents/memory/` (`log.py`, `settlement.py`, `reflection.py`) stores past
+`src/tradingagents/memory/` (`log.py`, `settlement.py`, `reflection.py`) stores past
 decisions and lessons. The Memory Log graph step settles due past decisions and
 loads lessons relevant to the ticker/date for the Portfolio Manager
 (`past_context`).
@@ -26,10 +26,10 @@ loads lessons relevant to the ticker/date for the Portfolio Manager
 
 | Concern | Behavior | Source |
 |---|---|---|
-| Interruptions | Checkpointing (when `checkpoint_enabled`) recompiles the graph with a per-ticker SQLite saver; a run resumes from the last successful node. | `tradingagents/graph/checkpointer.py` |
-| Across runs | The memory log persists decisions and lessons; settlement resolves due decisions on later runs. | `tradingagents/memory/` |
-| Across versions | The checkpoint thread id embeds a run signature (analysts, debate/risk depth, settings digest, layout) so a version change starts fresh instead of resuming stale state. | `tradingagent/graph/trading_graph.py` (`_run_signature`) |
-| Eval runs | Each run gets an isolated `run_id`, results dir, and memory/state log, so runs never feed into each other. | `eval/runner.py` |
+| Interruptions | Checkpointing (when `checkpoint_enabled`) recompiles the graph with a per-ticker SQLite saver; a run resumes from the last successful node. | `src/tradingagents/graph/checkpointer.py` |
+| Across runs | The memory log persists decisions and lessons; settlement resolves due decisions on later runs. | `src/tradingagents/memory/` |
+| Across versions | The checkpoint thread id embeds a run signature (analysts, debate/risk depth, settings digest, layout) so a version change starts fresh instead of resuming stale state. | `src/tradingagents/graph/trading_graph.py` (`_run_signature`) |
+| Eval runs | Each run gets an isolated `run_id`, results dir, and memory/state log, so runs never feed into each other. | `src/eval/runner.py` |
 
 ## 3. Write / retrieval policy
 
@@ -47,9 +47,15 @@ loads lessons relevant to the ticker/date for the Portfolio Manager
 
 ## 5. Retention
 
-- TODO (team): state the retention window for the memory log and results dirs.
-  Current behavior: results and logs are written under `results_dir` and
-  `data_cache_dir`; pruning is manual.
+- **Memory log:** retained for the duration of the course project (through the
+  final submission) so a reviewer can replay the recorded decisions; the owner
+  is the memory subsystem. No automatic pruning is performed.
+- **Evaluation artifacts:** each run writes under its own `run_id` and is kept
+  for the grading window; `results_dir` and `data_cache_dir` are pruned manually
+  by the run owner. Evidence referenced from `docs/evidence/` is retained until
+  the submission is graded.
+- **Checkpoints:** SQLite checkpoint files are per-ticker and may be deleted
+  when a run is abandoned; they are not part of the submitted evidence.
 
 ## 6. Privacy
 

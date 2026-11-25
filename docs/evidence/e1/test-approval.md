@@ -11,14 +11,14 @@ until this is done (that is expected, not a bug).
 
 - approved_by: HUANG SIYING (60572233)
 - approved_date: 2026-11-11
-- test_scope: NFR-E1 eval harness tests (tests/test_eval_harness.py) and CI gate scripts (tests/test_ci_gates.py); test-first evidence in transcripts/60572233-HUANG-SIYING.md.
+- test_scope: NFR-E1 eval harness tests (test/offline/test_eval_harness.py) and CI gate scripts (test/offline/test_ci_gates.py); test-first evidence in transcripts/60572233-HUANG-SIYING.md.
 
 ## What was approved
 
 - Requirement(s): NFR-E1 (with FR-E1, FR-E2, FR-E3, INV-E1)
-- Tests approved before implementation: `tests/test_eval_harness.py`
+- Tests approved before implementation: `test/offline/test_eval_harness.py`
   (golden set, manifest, run_suite isolation, before/after compare) and
-  `tests/test_ci_gates.py` (six gate scripts).
+  `test/offline/test_ci_gates.py` (six gate scripts).
 - Evidence of test-first: the eval tests were written and run before the
   harness/tool-arg changes they cover.
 

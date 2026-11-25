@@ -1,8 +1,9 @@
 # ADR-FR-A1: Deterministic Risk Gate
 
-- Status: Implemented on the `feat/fr-a1-risk-gate` feature branch, pending team
-  review and merge. (The test-first decisions below were made and approved before
-  implementation and are preserved as the historical record.)
+- Status: Implemented on `feat/fr-a1-risk-gate`; integrated into the D8 tree and
+  merged into `main` through PR #13/#14 (`5801e5f` / `1cc1d9f`). The test-first
+  decisions below were made and approved before implementation and are preserved
+  as the historical record.
 - Date: 2026-11-11
 - Owner: A
 - Requirement: FR-A1 (with INV-A1, NFR-A1, NFR-A2)
@@ -16,17 +17,17 @@ inherited baseline functionality.
 
 The TradingAgents baseline produces a final decision as Markdown:
 
-- `TraderProposal` (`tradingagents/agents/schemas.py:146`) carries `action`,
+- `TraderProposal` (`src/tradingagents/agents/schemas.py:146`) carries `action`,
   `reasoning`, `entry_price`, `stop_loss`, and free-text `position_sizing`.
-- `PortfolioDecision` (`tradingagents/agents/schemas.py:221`) carries a 5-tier
+- `PortfolioDecision` (`src/tradingagents/agents/schemas.py:221`) carries a 5-tier
   `rating`, `executive_summary`, `investment_thesis`, `price_target`, `time_horizon`.
 - Both are rendered to Markdown (`render_trader_proposal`, `render_pm_decision`)
   and the Pydantic objects are **discarded**; only the strings
   (`trader_investment_plan`, `final_trade_decision`) and `final_rating` reach state.
-- `PortfolioContext` (`tradingagents/portfolio.py:33`) has positions with only
+- `PortfolioContext` (`src/tradingagents/portfolio.py:33`) has positions with only
   `ticker`, `quantity`, `average_price`; no market value, no sector.
 - There is no deterministic final risk gate. `run_rating` passes model output
-  through unchanged (`tradingagents/agents/rating.py:106`).
+  through unchanged (`src/tradingagents/agents/rating.py:106`).
 
 FR-A1 requires that before any trade decision is output, the system validates
 `TraderProposal` and `PortfolioDecision` against a versioned policy, returning
@@ -44,9 +45,9 @@ Out of scope (not approved for implementation in this stage):
 - FR-A2 human approval queue. FR-A1 must *emit* `NEEDS_REVIEW` and block automatic
   execution, but the approval workflow itself is pending separate scope confirmation.
 - FR-A3 advanced/configuration-driven policy thresholds.
-- Features owned by B (evidence), C (token budget), D (structured adapter
-  internals), E (eval harness, CI). FR-A1 depends on D's structured path but does
-  not modify it.
+- Other workstreams (B evidence, C token budget, D structured adapter internals,
+  E eval/CI) are integrated separately on `main`; FR-A1 depends on D's structured
+  path but does not modify it. The NFR-C1 token budget remains partial.
 
 ## 3. Previous feasibility findings (verified against `46bde74`)
 
@@ -68,13 +69,13 @@ safety guarantee.
 
 ### C. Post-graph wrapper in `_run_graph` / `record_decision`
 Cons: the CLI uses `stream_run` and calls `record_decision` itself
-(`cli/run.py:353`), so a wrapper misses the CLI path; verdict is not in streamed
+(`src/cli/run.py:353`), so a wrapper misses the CLI path; verdict is not in streamed
 state.
 
 ### D. Pure engine + mandatory evaluation at the PM output boundary (selected)
 Split into:
 
-- a **pure, injectable engine** (`tradingagents/risk_gate/`) with no LangGraph,
+- a **pure, injectable engine** (`src/tradingagents/risk_gate/`) with no LangGraph,
   no network, no file I/O, no LLM, no dependency on a graph node; and
 - an **integration layer** that guarantees evaluation happens before any public
   decision is emitted, at the Portfolio Manager output boundary.
@@ -96,10 +97,10 @@ boundary:
 - The original model rating is preserved separately (`model_rating`).
 - A `REJECTED` or `NEEDS_REVIEW` recommendation must **not** propagate as an
   actionable final recommendation. At the public boundary it is surfaced using the
-  existing `REVIEW` sentinel semantics (`tradingagents/agents/rating.py:30`).
+  existing `REVIEW` sentinel semantics (`src/tradingagents/agents/rating.py:30`).
 - No final recommendation may bypass risk evaluation. Both the programmatic API
   (`TradingAgentsGraph.propagate` returning a signal) and the CLI stream path
-  (`cli/run.py`) must reflect the gate. Enforcement must be at a boundary that
+  (`src/cli/run.py`) must reflect the gate. Enforcement must be at a boundary that
   cannot publish before evaluation; if a graph node cannot guarantee that, the
   pure engine is invoked at the PM output boundary instead.
 
@@ -132,7 +133,7 @@ The system keeps three values distinct and never collapses them:
    baseline. FR-A1 does **not** silently redefine `run_rating`; instead the
    effective public signal at the decision boundary is derived so that a
    non-`APPROVED` actionable direction becomes the existing `REVIEW` sentinel
-   (`tradingagents/agents/rating.py:30`). Blocked recommendations therefore cannot
+   (`src/tradingagents/agents/rating.py:30`). Blocked recommendations therefore cannot
    escape as an actionable BUY through public signals, reports, or the memory log
    rating tag, while `model_rating` remains available for audit.
 
@@ -183,7 +184,7 @@ The system keeps three values distinct and never collapses them:
 - Versioned policy, initially `fr-a1-v1`, stable `policy_hash`. Draft thresholds
   10% / 30% / 1.5.
 - Deterministic, injectable blacklist policy; consistent ticker normalization
-  (`tradingagents/dataflows/symbols.py`).
+  (`src/tradingagents/dataflows/symbols.py`).
 - Audit record includes per-rule outcomes, minimal structured input snapshot,
   verdict, policy version and hash, UTC timestamp, evaluation latency. No
   credentials, raw prompts, or unnecessary personal portfolio details.
@@ -258,16 +259,16 @@ To keep the safety-critical core reviewable and isolated, implementation is spli
 
 ### Stage 1 — independent risk engine (the only stage approved next)
 
-Writes **only** new files under `tradingagents/risk_gate/` and their core tests.
+Writes **only** new files under `src/tradingagents/risk_gate/` and their core tests.
 Does **not** modify graph, agent, CLI, reporting, rating, memory, or checkpoint
 code. Proposed production files:
 
-- `tradingagents/risk_gate/__init__.py` (public exports)
-- `tradingagents/risk_gate/models.py` (enums, rule result, evaluation, audit, inputs)
-- `tradingagents/risk_gate/policy.py` (versioned `fr-a1-v1` policy + stable hash)
-- `tradingagents/risk_gate/sizing.py` (projected-weight derivation/validation)
-- `tradingagents/risk_gate/portfolio_snapshot.py` (consistency + projected exposure)
-- `tradingagents/risk_gate/engine.py` (pure `evaluate_risk` implementing R1–R6)
+- `src/tradingagents/risk_gate/__init__.py` (public exports)
+- `src/tradingagents/risk_gate/models.py` (enums, rule result, evaluation, audit, inputs)
+- `src/tradingagents/risk_gate/policy.py` (versioned `fr-a1-v1` policy + stable hash)
+- `src/tradingagents/risk_gate/sizing.py` (projected-weight derivation/validation)
+- `src/tradingagents/risk_gate/portfolio_snapshot.py` (consistency + projected exposure)
+- `src/tradingagents/risk_gate/engine.py` (pure `evaluate_risk` implementing R1–R6)
 
 Structural constraints for the core (verified by tests, not prose only):
 
@@ -282,14 +283,14 @@ Structural constraints for the core (verified by tests, not prose only):
 Core-only verification command:
 
 ```
-pytest tests/risk_gate -q \
-  --ignore=tests/risk_gate/test_integration_retention.py \
-  --ignore=tests/risk_gate/test_decision_boundary.py
+pytest test/offline/risk_gate -q \
+  --ignore=test/offline/risk_gate/test_integration_retention.py \
+  --ignore=test/offline/risk_gate/test_decision_boundary.py
 ```
 
 ### Stage 2 — integration (separate review and approval)
 
-Adds `tradingagents/risk_gate/node.py` and edits `state.py`, `trader.py`,
+Adds `src/tradingagents/risk_gate/node.py` and edits `state.py`, `trader.py`,
 `portfolio_manager.py`, `setup.py`, and `trading_graph.py` (state keys, structured
 retention, checkpoint marker, state-log fields). The API/CLI/checkpoint acceptance
 tests (`test_integration_retention.py`, `test_decision_boundary.py`) belong to this
@@ -370,22 +371,22 @@ incomplete rather than letting the rating alone define direction silently).
 
 ### 13.4 Exact files and interfaces affected (Stage 2 coding, later)
 
-- `tradingagents/agents/state.py` — additive keys: `trader_proposal`,
+- `src/tradingagents/agents/state.py` — additive keys: `trader_proposal`,
   `portfolio_decision`, `model_rating`, `risk_verdict`, `decision_status`,
   `risk_evaluation`.
-- `tradingagents/agents/trader/trader.py` — return `trader_proposal` alongside the
+- `src/tradingagents/agents/trader/trader.py` — return `trader_proposal` alongside the
   unchanged rendered string.
-- `tradingagents/agents/managers/portfolio_manager.py` — return
+- `src/tradingagents/agents/managers/portfolio_manager.py` — return
   `portfolio_decision`; invoke the gate adapter; set `final_rating` to the
   effective signal only through the adapter.
-- `tradingagents/graph/trading_graph.py` — pass `risk_portfolio` config to the PM
+- `src/tradingagents/graph/trading_graph.py` — pass `risk_portfolio` config to the PM
   adapter; add a `risk_gate` layout marker to `_run_signature`; persist the audit
   record in `_log_state`; guard `record_decision` so an audit-persistence failure
   cannot leave an actionable signal.
-- `tradingagents/risk_gate/adapter.py` (new) — pure wiring from structured objects
+- `src/tradingagents/risk_gate/adapter.py` (new) — pure wiring from structured objects
   + snapshot to `RiskInputs`, and the gate call. No graph import in the engine.
 
-No changes to `rating.py`, `reporting.py`, `report_html.py`, `cli/*`,
+No changes to `rating.py`, `reporting.py`, `report_html.py`, `src/cli/*`,
 `memory/*`, or `checkpoint.py` semantics are required: they consume `final_rating`,
 which the adapter sets to the effective signal, and `model_rating` is preserved for
 evidence.
@@ -475,7 +476,7 @@ recommendation.
 ## 15. Stage 2 final safety review: durable destination, missing action, malformed inputs
 
 Source review of the Stage 2 implementation found three gaps; this section records
-the required contract (verified test-first in `tests/risk_gate/test_adapter_safety.py`).
+the required contract (verified test-first in `test/offline/risk_gate/test_adapter_safety.py`).
 
 ### 15.1 Durable audit destination is mandatory for ACTIONABLE output
 
@@ -519,7 +520,7 @@ snapshot schema/numeric fields, or malformed `target_position`:
 
 ### 15.4 Baseline contract migration (approved)
 
-The six `tests/test_graph_end_to_end.py` assertions that expected the old model
+The six `test/offline/test_graph_end_to_end.py` assertions that expected the old model
 rating (`Overweight`) for runs **without** `risk_portfolio` are migrated to the
 approved fail-closed effective signal `REVIEW`. Unrelated assertions (graph
 completion, checkpoint recovery, state logs, memory, rendered decisions, agent

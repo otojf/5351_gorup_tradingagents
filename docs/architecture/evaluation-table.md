@@ -1,7 +1,9 @@
 # Candidate Evaluation Table (D2.8)
 
-The comparison that justifies the chosen architecture. Scoped to the NFR-E1
-evaluation harness; other feature branches keep their own comparisons.
+The comparison that justifies the chosen architecture. This table covers the
+NFR-E1 evaluation harness; the FR-A1 risk-gate candidates are compared in
+`docs/architecture/adr/adr-fr-a1-risk-gate.md` §4, and FR-B2/FR-C2/FR-D2 document
+their boundaries in the corresponding evidence folders.
 
 Candidates (see ADR-001):
 - A: standalone runner, no graph contact

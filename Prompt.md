@@ -26,8 +26,9 @@ the launch instruction. It does **not** run the agent unattended to completion.
    before a human approves the plan. This is the plan gate.
 
 4. **Build in approved slices.** Implement one approved slice at a time. Keep the
-   baseline: extend `tradingagents/`, `cli/`, `tests/`, `eval/`; never replace
-   them. Each new file references the ADR and invariant it implements.
+   baseline: extend `src/tradingagents/`, `src/cli/`, `test/`, `src/eval/`;
+   never replace them. Each new file references the ADR and invariant it
+   implements.
 
 5. **Self-verify, then stop again.** Run the tests and the six gates locally
    (`pytest -q`, `ruff check .`, and the `scripts/ci/` gates). Report results

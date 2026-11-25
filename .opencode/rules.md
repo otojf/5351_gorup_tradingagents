@@ -14,11 +14,12 @@ These rules apply to every session, always, regardless of task.
 
 ## Respect the baseline and boundaries
 
-3. Extend `tradingagents/`, `cli/`, `tests/`, `eval/`; never replace them.
-4. Data only through `tradingagents/dataflows/router.py`; models only through
-   `tradingagents/llm_clients`. Do not call vendors or providers inline.
-5. State keys live in `tradingagents/agents/state.py`; adding is additive, never
-   repurpose a key.
+3. Extend `src/tradingagents/`, `src/cli/`, `test/`, `src/eval/`; never replace
+   them.
+4. Data only through `src/tradingagents/dataflows/router.py`; models only through
+   `src/tradingagents/llm_clients`. Do not call vendors or providers inline.
+5. State keys live in `src/tradingagents/agents/state.py`; adding is additive,
+   never repurpose a key.
 6. Model output is advisory; deterministic code decides safety-relevant outcomes.
 
 ## Human-only and frozen

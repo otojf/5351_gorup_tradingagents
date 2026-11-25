@@ -19,7 +19,7 @@ team maintains.
 ## 2. Three-tier verification
 
 - **Structural** — imports, module boundaries, permissions, architectural fitness
-  functions (e.g. `tests/test_layering.py`, the structural constraints above).
+  functions (e.g. `test/offline/test_layering.py`, the structural constraints above).
 - **Regression** — all prior suites pass (`pytest -q`, gate 5).
 - **Behavioral** — quality thresholds: faithfulness/relevance where applicable,
   zero safety escapes (gate 4 replays the fixed golden set).
@@ -29,7 +29,7 @@ team maintains.
 | Gate | Script | Rule enforced |
 |---|---|---|
 | 1 test-approval | `check_test_approval.py` | tests approved before implementation (`docs/evidence/e1/test-approval.md`) |
-| 2 static analysis | `check_static_analysis.py` | ruff + pip check + compileall (type-check/contract/security/permission NOT covered — stated) |
+| 2 static analysis | `check_static_analysis.py` | ruff + pip check + compileall + mypy on safety-critical modules + permission/secret scans + layering/prompt-integrity contract tests + public-package import smoke (full-repo mypy and a full API suite remain out of scope — stated) |
 | 3 schema | `check_schema.py` | registry validates against `req-schema.json` |
 | 4 semantic eval | `check_semantic_eval.py` | fixed golden set yields expected output |
 | 5 regression | `check_regression.py` | full prior suite passes |

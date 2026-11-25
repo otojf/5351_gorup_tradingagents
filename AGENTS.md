@@ -21,7 +21,7 @@ Upstream baseline: TradingAgents v0.7.1 (commit `9fa1196`), team baseline
 - Install: `pip install -e ".[dev]"`.
 - Test: `pytest -q` (offline, `-m "not integration"` by default).
 - Lint: `ruff check .` (strict select in `pyproject.toml`).
-- The NFR-E1 eval harness lives in `eval/`; the six CI gates live in
+- The NFR-E1 eval harness lives in `src/eval/`; the six CI gates live in
   `scripts/ci/` and run in `.github/workflows/ci.yml`.
 
 ## 2. Reading order (before writing code)
@@ -41,20 +41,22 @@ Upstream baseline: TradingAgents v0.7.1 (commit `9fa1196`), team baseline
 
 ## 3. Code baseline and module organization
 
-- Baseline: the existing `tradingagents/`, `cli/`, `tests/`, `eval/` code.
-  **Extend the existing baseline; never replace it.**
+- Baseline: the existing `src/tradingagents/`, `src/cli/`, `test/`, `src/eval/`
+  code. **Extend the existing baseline; never replace it.**
 - Each architectural element maps to exactly one module:
-  - `tradingagents/agents/analysts/` — the four analysts (market, sentiment, news, fundamentals).
-  - `tradingagents/agents/researchers/` — Bull/Bear researchers.
-  - `tradingagents/agents/managers/` — Research Manager, Portfolio Manager.
-  - `tradingagents/agents/trader/` — Trader.
-  - `tradingagents/agents/risk_mgmt/` — Aggressive/Neutral/Conservative analysts.
-  - `tradingagents/graph/` — graph setup, propagation, conditional logic, checkpointing.
-  - `tradingagents/dataflows/` — vendor routing and data adapters.
-  - `tradingagents/llm_clients/` — provider clients.
-  - `tradingagents/memory/` — memory log + settlement/reflection.
-  - `cli/` — CLI entry and display.
-  - `eval/` — the NFR-E1 evaluation harness.
+  - `src/tradingagents/agents/analysts/` — the four analysts (market, sentiment, news, fundamentals).
+  - `src/tradingagents/agents/researchers/` — Bull/Bear researchers.
+  - `src/tradingagents/agents/managers/` — Research Manager, Portfolio Manager.
+  - `src/tradingagents/agents/trader/` — Trader.
+  - `src/tradingagents/agents/risk_mgmt/` — Aggressive/Neutral/Conservative analysts.
+  - `src/tradingagents/graph/` — graph setup, propagation, conditional logic, checkpointing.
+  - `src/tradingagents/dataflows/` — vendor routing and data adapters.
+  - `src/tradingagents/llm_clients/` — provider clients.
+  - `src/tradingagents/memory/` — memory log + settlement/reflection.
+  - `src/tradingagents/risk_gate/` — deterministic risk gate (FR-A1).
+  - `src/fr_b2/` — conclusion citation checker (FR-B2).
+  - `src/cli/` — CLI entry and display.
+  - `src/eval/` — the NFR-E1 evaluation harness.
   - `scripts/ci/` — the six blocking gates.
 - Module names match architectural elements. A new file must reference the ADR
   and invariant it implements.
@@ -63,8 +65,8 @@ Upstream baseline: TradingAgents v0.7.1 (commit `9fa1196`), team baseline
 
 | Path | Status |
 |---|---|
-| `tradingagents/`, `cli/` | Modifiable under the constraints below and `.opencode/permissions.jsonc`. |
-| `tests/`, `eval/`, `scripts/ci/` | Modifiable; tests are added/extended, never weakened to pass. |
+| `src/tradingagents/`, `src/cli/`, `src/fr_b2/` | Modifiable under the constraints below and `.opencode/permissions.jsonc`. |
+| `test/`, `src/eval/`, `scripts/ci/` | Modifiable; tests are added/extended, never weakened to pass. |
 | `docs/`, `transcripts/` | Modifiable (docs). |
 | `.github/workflows/` | Modifiable only for gate changes approved by the team. |
 | `AGENTS.md`, `Prompt.md`, `architecture-blueprint.md`, `.opencode/rules.md`, `.agent/rules.md` | **Human-only**; changes require an architecture decision. |
@@ -74,17 +76,24 @@ Upstream baseline: TradingAgents v0.7.1 (commit `9fa1196`), team baseline
 ## 5. Integration contracts between modules
 
 - **State contract**: graph state keys are declared in
-  `tradingagents/agents/state.py` (`AgentState`). Adding a key is additive; do
+  `src/tradingagents/agents/state.py` (`AgentState`). Adding a key is additive; do
   not repurpose an existing key.
-- **Vendor contract**: data access goes through `tradingagents/dataflows/router.py`
-  (`VENDOR_METHODS`); do not call a vendor directly from an agent.
-- **LLM contract**: model creation goes through `tradingagents/llm_clients`
+- **Vendor contract**: data access goes through
+  `src/tradingagents/dataflows/router.py` (`VENDOR_METHODS`); do not call a
+  vendor directly from an agent.
+- **LLM contract**: model creation goes through `src/tradingagents/llm_clients`
   (`create_tier_client`); never instantiate a provider client inline.
 - **Structured-output contract**: decision agents use the schemas in
-  `tradingagents/agents/schemas.py` via `tradingagents/agents/structured.py`;
-  a failed structured parse is marked DEGRADED, never silently dropped.
+  `src/tradingagents/agents/schemas.py` via
+  `src/tradingagents/agents/structured.py`; a failed structured parse is marked
+  DEGRADED, never silently dropped.
+- **Risk contract**: the Portfolio Manager output boundary calls
+  `src/tradingagents/risk_gate/`; model output is advisory and the gate verdict
+  controls the published rating.
+- **Citation contract**: `src/fr_b2/` checks supplied citations against the
+  report and registered evidence; it never calls a model.
 - **Eval contract**: the harness patches only through the `Source`/`LLMSource`
-  protocols in `eval/sources.py`; it must not modify production behavior.
+  protocols in `src/eval/sources.py`; it must not modify production behavior.
 - **Authority boundary**: model output is advisory; deterministic code (risk gate,
   rating integrity, budget) is authoritative. See `architecture-blueprint.md` §4.
 

@@ -2,7 +2,7 @@
 
 The course specification (D8, §5 "Required Repository Structure") names
 `src/` (full source) and `test/offline/` + `test/live/`. This repository now uses
-that layout **physically** (branch `integration/d8-structure`), so the table
+that layout **physically** on `main` (merged through PR #13/#14), so the table
 below documents the real locations (no longer a mapping away from spec paths).
 
 | Spec path (§5/D8) | Actual path in this repo | Notes |
@@ -14,7 +14,7 @@ below documents the real locations (no longer a mapping away from spec paths).
 | `AGENTS.md` | `AGENTS.md` | D3 coding-agent entry point. |
 | `architecture-blueprint.md` | `architecture-blueprint.md` | D2.1 master constraint document. |
 | `Prompt.md` | `Prompt.md` | D9 static startup prompt. |
-| `Report.md` | `Report.md` | D6 process report (skeleton; team to fill). |
+| `Report.md` | `Report.md` | D6 process report; final version merged through PR #19 (7.5k words, five reflections). |
 | `docs/req/requirements.yaml` | `docs/req/requirements.yaml` | D1 registry. |
 | `docs/req/req-schema.json` | `docs/req/req-schema.json` | D1 CI schema. |
 | `docs/architecture/*` | `docs/architecture/` | `adr/`, `invariants.md`, `trace-matrix.md`, `memory-design.md`, `permission-model.md`, `runtime-policy-catalog.md`, `evaluation-table.md`, `evaluation-logbook.md`, `risk-list.md`, `option-ledger.md`, `repository-structure-mapping.md`. |
@@ -24,7 +24,7 @@ below documents the real locations (no longer a mapping away from spec paths).
 | `docs/review-memo.md`, `docs/debt-register.md`, `docs/bug-diary.md` | `docs/` | D4 QA records. |
 | `.opencode/`, `.agent/` | `.opencode/`, `.agent/` | D3 permissions + rules. |
 | `.github/workflows/ci.yml` | `.github/workflows/ci.yml` | D4/D7 six blocking gates. |
-| `prompts/prompt_v1.*.yaml` | *(not present)* | Versioned runtime prompts not yet added; runtime prompts are inlined in agent modules. |
+| `prompts/prompt_v1.*.yaml` | `prompts/prompt_v1.0.yaml`, `prompts/prompt_v1.1.yaml` | Versioned runtime prompt records restored from the compliance history (PR #13); runtime prompts remain inlined in agent modules. |
 | `transcripts/<student-id>-<student-name>.md` | `transcripts/` | D5: annotated transcripts for E1, B2, C2, D2, and A1. D2 covers the FR-D2 reimplementation session (PR #17); A1 covers the FR-A1 decision-safety session (PR #15). All five are present on `main`. |
 
 ## Why the earlier "mapping-only" decision changed

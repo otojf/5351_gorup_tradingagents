@@ -20,10 +20,11 @@ Legend: R = read, W = write, – = denied (default).
 |---|---|---|---|
 | `docs/req/**` | R | R | R |
 | `docs/architecture/**`, `architecture-blueprint.md` | R | R | R |
-| `tradingagents/**`, `cli/**` | R | R+W | R |
-| `tests/**`, `eval/**`, `scripts/ci/**` | R | R+W | R |
+| `src/tradingagents/**`, `src/cli/**`, `src/fr_b2/**` | R | R+W | R |
+| `test/**`, `src/eval/**`, `scripts/ci/**` | R | R+W | R |
 | `docs/**` (other), `transcripts/**` | R | R+W | R |
 | `prompts/**` | R | R | R |
+| `pyproject.toml` | R | R+W (dependency changes need review) | R |
 | `.github/workflows/**` | R | R (W only with team approval) | R |
 | `AGENTS.md`, `Prompt.md`, `.opencode/rules.md`, `.agent/rules.md` | R | **–** (human-only) | R |
 | `.env*`, secrets, credentials | **–** | **–** | **–** |
@@ -34,8 +35,10 @@ Legend: R = read, W = write, – = denied (default).
 - Human-only files cannot be written by any agent role; a change requires an
   architecture decision (ADR) and human approval.
 - Secrets are never read or written. A command that would read `.env*` is denied.
-- Safety-critical paths (`tradingagents/agents/rating.py`, the risk gate, budget
-  cap) require an approving human review before merge.
+- Safety-critical paths (`src/tradingagents/agents/rating.py`,
+  `src/tradingagents/risk_gate/**`, `src/tradingagents/graph/**`) require an
+  approving human review before merge. The budget cap is not implemented
+  (NFR-C1 is partial), so no budget path exists yet.
 - The verifier role never edits source; it only reports.
 
 ## 4. Enforcement
@@ -45,7 +48,11 @@ Legend: R = read, W = write, – = denied (default).
   human gates in CI.
 - `docs/review-memo.md` records the human review for safety-critical changes.
 
-## 5. Known gaps
+## 5. Enforcement check
 
-- TODO (team): no automated permission test yet beyond CI gates; see
-  `docs/debt-register.md` (guardrail debt).
+- `scripts/ci/check_permissions.py` (part of gate 2) parses
+  `.opencode/permissions.jsonc` and verifies that every whitelisted path pattern
+  resolves to a tracked path, that the human-only files are read-only, and that
+  the safety-critical paths carry the architecture-decision guard. It is a
+  structural check, not a substitute for the human review recorded in
+  `docs/review-memo.md`.
