@@ -64,7 +64,7 @@ def test_gate1_complete_record_passes(tmp_path):
     rec.write_text(
         "- approved_by: Alice (123)\n"
         "- approved_date: 2026-11-11\n"
-        "- test_scope: tests/test_eval_harness.py\n",
+        "- test_scope: test/offline/test_eval_harness.py\n",
         encoding="utf-8",
     )
     assert check_record(rec) == []
@@ -114,7 +114,7 @@ def test_gate6_real_repo_covers_eval_change():
     from check_ai_use_log import check
 
     # The eval change is listed in the AI-use log.
-    assert check(["eval/runner.py"]) == []
+    assert check(["src/eval/runner.py"]) == []
 
 
 def test_gate6_bad_input_missing_entry():
@@ -153,6 +153,49 @@ def test_gate2_static_analysis_runs_and_reports_uncovered():
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "NOT covered" in proc.stdout or "NOT COVERED" in proc.stdout
+
+
+def test_gate2_permissions_real_repo_passes():
+    from check_permissions import check
+
+    assert check() == []
+
+
+def test_gate2_permissions_bad_input_old_path(tmp_path):
+    from check_permissions import check
+
+    bad = tmp_path / "permissions.jsonc"
+    bad.write_text(
+        "{\n"
+        '  "default": {"read": false, "write": false},\n'
+        '  "readOnly": ["AGENTS.md"],\n'
+        '  "readWrite": ["tradingagents/**", "tests/**"],\n'
+        '  "guard": {"humanOnly": [], "requiresArchitectureDecision": []},\n'
+        '  "roles": {"builder": {"write": ["tradingagents/**", "tests/**"]}}\n'
+        "}\n",
+        encoding="utf-8",
+    )
+    problems = check(bad)
+    assert any("resolves to no path" in p for p in problems)
+    assert any("safety path missing" in p for p in problems)
+
+
+def test_gate2_secret_scan_real_repo_clean():
+    from check_secrets import check
+
+    assert check() == []
+
+
+def test_gate2_secret_scan_detects_fake_key(tmp_path, monkeypatch):
+    import check_secrets
+
+    fake = "sk-" + "A" * 24
+    bad = tmp_path / "leak.txt"
+    bad.write_text("API_KEY=" + fake + "\n", encoding="utf-8")
+    monkeypatch.setattr(check_secrets, "_tracked_files", lambda root: [bad])
+    problems = check_secrets.check(tmp_path)
+    assert problems
+    assert any(("provider API key" in p) or ("assigned secret" in p) for p in problems)
 
 
 def test_gate4_semantic_eval_mocked_pass(monkeypatch):
@@ -212,6 +255,8 @@ def test_gate_scripts_importable_and_have_main():
         "check_schema",
         "check_ai_use_log",
         "check_static_analysis",
+        "check_permissions",
+        "check_secrets",
         "check_semantic_eval",
         "check_regression",
     ):

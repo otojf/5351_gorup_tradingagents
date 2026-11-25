@@ -144,6 +144,7 @@ def check_claim(claim: dict, *, report_lines: list[str], report_path: Path,
     if problems:
         return _result(claim_id, UNTRACEABLE, "malformed_citation",
                        location=claim_location, detail="; ".join(problems))
+    assert isinstance(source_line, int) and not isinstance(source_line, bool)
 
     # 4) Resolve the source against the source table.
     entry = (sources or {}).get(source_id)

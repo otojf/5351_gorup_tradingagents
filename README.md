@@ -26,8 +26,12 @@ GitHub repository: <https://github.com/otojf/5351_gorup_tradingagents>
 | `src/tradingagents/`、`src/cli/`、`src/eval/`、`src/fr_b2/` | 应用源码（D8 `src/` 布局；上游 v0.7.1，commit `9fa1196`） |
 | `test/offline/` | 确定性离线测试（默认 `-m "not integration"`） |
 | `test/live/` | 需外部 API 的集成测试（`@pytest.mark.integration`，显式 `-m integration` 才跑） |
-| `docs/req/requirements.yaml` | 最终 5 条主需求 |
-| `docs/req/requirements-options.yaml` | 35 条候选需求，供组员挑选 |
+| `docs/req/` | 需求 registry、JSON schema 和 35 条候选池 |
+| `docs/architecture/`、`docs/code-governance/` | D2 架构工件与 D3/D4 治理规则 |
+| `prompts/` | 版本化 runtime prompt 记录（v1.0 / v1.1） |
+| `transcripts/` | 五份 D5 annotated agent-session transcripts |
+| `Report.md` | D6 项目报告 |
+| `scripts/ci/` | 六道 blocking gates 的本地脚本 |
 
 安装：`pip install -e ".[dev]"`
 
@@ -52,14 +56,14 @@ checks; branch protection (9 checks + one approving review) is configured on
 | # | Gate | Script / command | What it checks | Known gaps (stated, not faked) |
 |---|---|---|---|---|
 | 1 | test-approval | `scripts/ci/check_test_approval.py` | `docs/evidence/e1/test-approval.md` has approver, date, test scope (no TODO placeholders) | Human gate; script only checks the record exists and is filled, not that approval truly preceded coding |
-| 2 | static analysis | `scripts/ci/check_static_analysis.py` | `ruff check .` + `pip check` + `compileall` | **No** type-check (mypy/pyright), contract/API-surface, dedicated security scan, or permission checks |
+| 2 | static analysis | `scripts/ci/check_static_analysis.py` | `ruff check .` + `pip check` + `compileall` + mypy on the safety-critical modules + permission/secret scans + layering/prompt-integrity contract tests + public-package import smoke | Full-repo mypy and a full API-compatibility suite remain out of scope (DEBT-02) |
 | 3 | schema | `scripts/ci/check_schema.py` | `requirements.yaml` validates against `req-schema.json` | Structural only; does not judge semantic quality |
 | 4 | semantic eval | `scripts/ci/check_semantic_eval.py` | Runs `test/offline/test_eval_harness.py` (fixed golden set) | Deterministic under scripted source; not real-input semantic quality (FR-E4) |
 | 5 | regression | `scripts/ci/check_regression.py` | `pytest -q` (full default suite) | — |
 | 6 | AI-use log | `scripts/ci/check_ai_use_log.py` | code/prompt change has a matching `docs/ai-use-log.yaml` entry | Presence/coverage only; cannot verify an entry is true |
 
-Gate 1 currently **fails by design** until the team fills `approved_by` in
-`docs/evidence/e1/test-approval.md`. Gate scripts' own tests live in
+Gate 1 **passes**: `docs/evidence/e1/test-approval.md` has `approved_by`,
+`approved_date`, and `test_scope` filled. Gate scripts' own tests live in
 `test/offline/test_ci_gates.py`.
 
 ### CI triggers and required checks
@@ -67,7 +71,8 @@ Gate 1 currently **fails by design** until the team fills `approved_by` in
 The six gates are wired into `.github/workflows/ci.yml`:
 
 - `push` to `main` / release tags and every `pull_request` run gates 2–5 and the
-  `smoke-install` job.
+  `smoke-install` job. Gate 2 includes the permission, secret, mypy and
+  contract/API-surface checks described above.
 - Gates 1 (`gate-1-test-approval`) and 6 (`gate-6-ai-use-log`) run **only on
   `pull_request`** — they guard a change, not a push.
 - `gate-5-regression` keeps the Python 3.11–3.14 matrix (4 checks; the

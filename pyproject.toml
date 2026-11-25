@@ -33,6 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff>=0.16",
+    "mypy>=1.10",
     "pytest>=8.0",
     "pytest-subtests>=0.13",
     "jsonschema>=4.0",
@@ -68,6 +69,23 @@ markers = [
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+follow_imports = "skip"
+# The upstream baseline is not fully typed; gate 2 checks the new
+# safety-critical modules. Full-repo typing is tracked as DEBT-02.
+files = [
+    "src/tradingagents/risk_gate",
+    "src/fr_b2",
+    "src/eval",
+    "src/tradingagents/agents/structured.py",
+    "src/tradingagents/dataflows/vendor_skip.py",
+    "src/tradingagents/dataflows/router.py",
+    "src/tradingagents/agents/managers/portfolio_manager.py",
+    "src/tradingagents/agents/state.py",
 ]
 
 [tool.ruff]
